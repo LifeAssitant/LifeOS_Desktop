@@ -1,0 +1,15 @@
+export const colors = {
+  bg: "#F7F1EA",
+  bgSoft: "#FFF8F1",
+  card: "#FFFFFF",
+  ink: "#2F2A26",
+  muted: "#8A7F76",
+  line: "#E8DFD4",
+  peach: "#E8A87C",
+  peachSoft: "#F6D5B8",
+  mint: "#A8D5C5",
+  mintSoft: "#D8F0E7",
+  blush: "#F2C6C2",
+  danger: "#D96B6B",
+  success: "#5FAF8D",
+};
