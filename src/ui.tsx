@@ -1,6 +1,8 @@
-import { CSSProperties, FormEvent, ReactNode } from "react";
+import { CSSProperties, FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-import { colors, fonts, radii } from "./theme";
+import { clayShadow, colors, fonts, radii } from "./theme";
+import { useThemeMode } from "./themeMode";
 
 export function Shell({ children }: { children: ReactNode }) {
   return <div className="lifeos-shell">{children}</div>;
@@ -16,7 +18,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={className} style={{ ...styles.card, ...style }}>
+    <div className={`panel ${className || ""}`} style={{ padding: 18, ...style }}>
       {children}
     </div>
   );
@@ -26,19 +28,26 @@ export function Companion({ size = 48 }: { size?: number }) {
   const eye = Math.max(5, Math.round(size * 0.12));
   return (
     <div
+      className="companion-float"
       style={{
         width: size,
         height: size,
         borderRadius: size / 2,
         background: `linear-gradient(145deg, ${colors.apricotSoft}, ${colors.mossSoft})`,
-        border: `1.5px solid ${colors.line}`,
-        boxShadow: `inset 0 -6px 14px rgba(31,26,22,0.06)`,
+        boxShadow: clayShadow({ lift: 8 }),
         display: "grid",
         placeItems: "center",
       }}
       aria-hidden
     >
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: size * 0.04 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: size * 0.04,
+        }}
+      >
         <div style={{ display: "flex", gap: size * 0.16 }}>
           <span className="companion-eye" style={{ ...styles.eye, width: eye, height: eye }} />
           <span className="companion-eye" style={{ ...styles.eye, width: eye, height: eye }} />
@@ -72,29 +81,215 @@ export function Button({
 }) {
   const background =
     variant === "primary"
-      ? colors.apricot
+      ? `linear-gradient(160deg, color-mix(in srgb, ${colors.apricot} 75%, white), ${colors.apricot})`
       : variant === "moss"
-        ? colors.moss
+        ? `linear-gradient(160deg, color-mix(in srgb, ${colors.moss} 80%, white), ${colors.moss})`
         : variant === "danger"
           ? colors.blush
-          : "transparent";
-  const color = variant === "moss" ? colors.paper : colors.ink;
+          : "var(--panel)";
+  const color = variant === "moss" || variant === "primary" ? "#fff" : colors.ink;
+
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="soft-btn"
+      className="clay-btn soft-btn"
       style={{
         ...styles.button,
         background,
         color,
-        border: variant === "ghost" ? `1px solid ${colors.line}` : "none",
         opacity: disabled ? 0.55 : 1,
       }}
     >
       {children}
     </button>
+  );
+}
+
+export function ThemeToggle() {
+  const { style, scheme, setStyle, setScheme } = useThemeMode();
+  return (
+    <div className="theme-controls">
+      <div className="theme-toggle" role="group" aria-label="Surface style">
+        <button
+          type="button"
+          className={style === "clay" ? "is-active" : undefined}
+          onClick={() => setStyle("clay")}
+        >
+          Clay
+        </button>
+        <button
+          type="button"
+          className={style === "glass" ? "is-active" : undefined}
+          onClick={() => setStyle("glass")}
+        >
+          Glass
+        </button>
+      </div>
+      <div className="theme-toggle" role="group" aria-label="Color scheme">
+        <button
+          type="button"
+          className={scheme === "light" ? "is-active" : undefined}
+          onClick={() => setScheme("light")}
+        >
+          Light
+        </button>
+        <button
+          type="button"
+          className={scheme === "dark" ? "is-active" : undefined}
+          onClick={() => setScheme("dark")}
+        >
+          Dark
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function IconButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string;
+  onClick?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button type="button" className="icon-btn" aria-label={label} title={label} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+export function AccountMenu({
+  name,
+  email,
+  onLogout,
+}: {
+  name?: string | null;
+  email?: string | null;
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+  const initial = (name || email || "U").trim().charAt(0).toUpperCase();
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="account-menu" ref={ref}>
+      <button
+        type="button"
+        className="account-trigger"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Account menu"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="account-avatar">{initial}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
+          <path
+            d="M3 4.5 L6 7.5 L9 4.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
+      {open ? (
+        <div className="account-dropdown panel" role="menu">
+          <div className="account-meta">
+            <div className="account-meta-name">{name || "Account"}</div>
+            {email ? <div className="account-meta-email">{email}</div> : null}
+          </div>
+          <button
+            type="button"
+            className="account-item"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              navigate("/settings");
+            }}
+          >
+            <SettingsIcon />
+            Settings
+          </button>
+          <div className="account-theme">
+            <div className="account-theme-label">Appearance</div>
+            <ThemeToggle />
+          </div>
+          <button
+            type="button"
+            className="account-item account-item-danger"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              onLogout();
+            }}
+          >
+            <LogoutIcon />
+            Sign out
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="M19.4 15a1.7 1.7 0 0 0 .34 1.86l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.86-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.86.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.86 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.86l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.86.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.86-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.86V9c0 .69.4 1.3 1 1.55H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.45Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M16 17l5-5-5-5M21 12H9"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -115,6 +310,7 @@ export function Field({
     <label style={styles.field}>
       <span style={styles.label}>{label}</span>
       <input
+        className="clay-input"
         style={styles.input}
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -140,16 +336,23 @@ export function AuthForm({
 }) {
   return (
     <Shell>
-      <div style={styles.authWrap} className="fade-up">
-        <Companion size={72} />
-        <h1 style={styles.brand}>LifeOS</h1>
-        <p style={styles.lede}>{subtitle}</p>
-        <div style={styles.authPanel}>
-          <h2 style={styles.authTitle}>{title}</h2>
-          <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <div className="auth-screen fade-up">
+        <div className="auth-card panel panel-warm">
+          <div className="auth-brand">
+            <Companion size={56} />
+            <h1 className="auth-brand-name">LifeOS</h1>
+            <p className="auth-lede">{subtitle}</p>
+          </div>
+
+          <h2 className="auth-title">{title}</h2>
+          <form onSubmit={onSubmit} className="auth-form">
             {children}
           </form>
-          <div style={{ marginTop: 16 }}>{footer}</div>
+          <div className="auth-footer">{footer}</div>
+        </div>
+
+        <div className="auth-theme">
+          <ThemeToggle />
         </div>
       </div>
     </Shell>
@@ -172,17 +375,14 @@ export function PageTitle({
 }
 
 export function EmptyHint({ children }: { children: ReactNode }) {
-  return <p style={{ color: colors.muted, margin: 0, lineHeight: 1.5 }}>{children}</p>;
+  return (
+    <p style={{ color: colors.muted, margin: 0, lineHeight: 1.55, fontSize: 14 }}>
+      {children}
+    </p>
+  );
 }
 
 const styles: Record<string, CSSProperties> = {
-  card: {
-    background: colors.paper,
-    border: `1px solid ${colors.lineSoft}`,
-    borderRadius: radii.lg,
-    padding: 16,
-    boxShadow: "0 10px 30px rgba(31,26,22,0.04)",
-  },
   eye: {
     borderRadius: 999,
     background: colors.ink,
@@ -191,78 +391,36 @@ const styles: Record<string, CSSProperties> = {
   },
   button: {
     borderRadius: radii.pill,
-    padding: "8px 14px",
+    padding: "9px 16px",
     fontWeight: 650,
     cursor: "pointer",
     letterSpacing: 0.01,
     fontSize: 13,
+    border: "none",
   },
-  field: { display: "flex", flexDirection: "column", gap: 5 },
+  field: { display: "flex", flexDirection: "column", gap: 6 },
   label: {
     fontSize: 11,
     color: colors.muted,
     fontWeight: 650,
-    letterSpacing: 0.04,
+    letterSpacing: 0.05,
     textTransform: "uppercase",
   },
   input: {
-    borderRadius: 12,
-    border: `1px solid ${colors.line}`,
-    padding: "10px 12px",
+    padding: "11px 13px",
     fontSize: 14,
-    background: colors.bgSoft,
-    color: colors.ink,
-    outline: "none",
-  },
-  authWrap: {
-    minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: 24,
-  },
-  brand: {
-    margin: "4px 0 0",
-    fontFamily: fonts.display,
-    fontSize: 42,
-    fontWeight: 700,
-    letterSpacing: -1,
-    color: colors.ink,
-  },
-  lede: {
-    color: colors.muted,
-    margin: "0 0 14px",
-    fontSize: 15,
-    maxWidth: 320,
-    textAlign: "center",
-    lineHeight: 1.45,
-  },
-  authPanel: {
-    width: "min(380px, 100%)",
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-  },
-  authTitle: {
-    margin: "0 0 10px",
-    fontFamily: fonts.display,
-    fontSize: 24,
-    fontWeight: 600,
-    color: colors.ink,
   },
   pageTitle: {
     margin: 0,
     fontFamily: fonts.display,
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: 650,
     letterSpacing: -0.4,
     color: colors.ink,
   },
   pageSub: {
-    margin: "4px 0 0",
+    margin: "6px 0 0",
     color: colors.muted,
-    fontSize: 13,
+    fontSize: 14,
   },
 };
