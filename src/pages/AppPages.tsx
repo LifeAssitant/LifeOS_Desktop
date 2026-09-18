@@ -133,6 +133,7 @@ type DayItem = {
   title: string;
   when: string;
   kind: "event" | "task";
+  source?: "chat" | "manual" | "google";
 };
 
 export function HomePage() {
@@ -163,6 +164,7 @@ export function HomePage() {
         title: e.title,
         when: e.start_at,
         kind: "event",
+        source: e.source,
       });
     }
     for (const t of tasks) {
@@ -172,6 +174,7 @@ export function HomePage() {
         title: t.title,
         when: t.due_at,
         kind: "task",
+        source: t.source,
       });
     }
     for (const [, list] of map) {
@@ -284,6 +287,7 @@ export function HomePage() {
   };
 
   const removeItem = async (item: DayItem) => {
+    if (item.source === "google") return;
     if (item.kind === "event") await deleteEvent(item.id);
     else await deleteTask(item.id);
   };
@@ -461,8 +465,11 @@ export function HomePage() {
                     alignItems: "center",
                     padding: "8px 10px",
                     borderRadius: 10,
-                    background: colors.paper,
-                    border: `1px solid ${colors.lineSoft}`,
+                    background: item.source === "google" ? "transparent" : colors.paper,
+                    border:
+                      item.source === "google"
+                        ? `1px dashed ${colors.line}`
+                        : `1px solid ${colors.lineSoft}`,
                   }}
                 >
                   <div style={{ display: "flex", gap: 8, minWidth: 0 }}>
@@ -472,14 +479,20 @@ export function HomePage() {
                         height: 7,
                         borderRadius: 99,
                         marginTop: 5,
-                        background: item.kind === "event" ? colors.moss : colors.apricot,
+                        background:
+                          item.source === "google"
+                            ? colors.muted
+                            : item.kind === "event"
+                              ? colors.moss
+                              : colors.apricot,
                         flexShrink: 0,
                       }}
                     />
                     <div style={{ minWidth: 0 }}>
                       <div style={{ fontWeight: 600, fontSize: 13 }}>{item.title}</div>
                       <div style={{ color: colors.muted, fontSize: 12 }}>
-                        {item.kind} · {formatTime(item.when) || formatWhen(item.when)}
+                        {item.source === "google" ? "Google" : item.kind} ·{" "}
+                        {formatTime(item.when) || formatWhen(item.when)}
                       </div>
                     </div>
                   </div>
@@ -489,9 +502,11 @@ export function HomePage() {
                         Done
                       </Button>
                     ) : null}
-                    <Button variant="ghost" onClick={() => void removeItem(item)}>
-                      Remove
-                    </Button>
+                    {item.source === "google" ? null : (
+                      <Button variant="ghost" onClick={() => void removeItem(item)}>
+                        Remove
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -606,10 +621,39 @@ export function HomePage() {
 
 export function SettingsPage() {
   const { user, refreshUser } = useAuth();
+  const { refreshAll } = useLifeData();
   const [mode, setMode] = useState<"hosted" | "byok">(user?.ai_mode ?? "hosted");
   const [key, setKey] = useState("");
   const [remindBefore, setRemindBefore] = useState(String(user?.remind_before_minutes ?? 15));
   const [msg, setMsg] = useState("");
+  const [calendarConnected, setCalendarConnected] = useState(
+    Boolean(user?.google_calendar_connected)
+  );
+  const [calendarBusy, setCalendarBusy] = useState(false);
+
+  useEffect(() => {
+    setCalendarConnected(Boolean(user?.google_calendar_connected));
+  }, [user?.google_calendar_connected]);
+
+  useEffect(() => {
+    void api.googleCalendarStatus().then((s) => setCalendarConnected(s.connected)).catch(() => null);
+  }, []);
+
+  useEffect(() => {
+    const onConnected = async () => {
+      setMsg("Google Calendar connected. Syncing…");
+      try {
+        await api.googleCalendarSync();
+        await Promise.all([refreshUser(), refreshAll()]);
+        setCalendarConnected(true);
+        setMsg("Google Calendar synced.");
+      } catch (err) {
+        setMsg(err instanceof Error ? err.message : "Sync failed");
+      }
+    };
+    window.addEventListener("lifeos-calendar-connected", onConnected);
+    return () => window.removeEventListener("lifeos-calendar-connected", onConnected);
+  }, [refreshAll, refreshUser]);
 
   const save = async () => {
     try {
@@ -632,6 +676,50 @@ export function SettingsPage() {
       window.open(checkout_url, "_blank");
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Stripe not configured");
+    }
+  };
+
+  const connectCalendar = async () => {
+    setCalendarBusy(true);
+    setMsg("");
+    try {
+      const { url } = await api.googleCalendarConnect();
+      if (window.lifeosDesktop?.openExternal) await window.lifeosDesktop.openExternal(url);
+      else window.open(url, "_blank");
+      setMsg("Finish connecting in your browser…");
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Could not start Google Calendar connect");
+    } finally {
+      setCalendarBusy(false);
+    }
+  };
+
+  const syncCalendar = async () => {
+    setCalendarBusy(true);
+    setMsg("");
+    try {
+      const result = await api.googleCalendarSync();
+      await refreshAll();
+      setMsg(`Synced ${result.synced} events.`);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setCalendarBusy(false);
+    }
+  };
+
+  const disconnectCalendar = async () => {
+    setCalendarBusy(true);
+    setMsg("");
+    try {
+      await api.googleCalendarDisconnect();
+      await Promise.all([refreshUser(), refreshAll()]);
+      setCalendarConnected(false);
+      setMsg("Google Calendar disconnected.");
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Disconnect failed");
+    } finally {
+      setCalendarBusy(false);
     }
   };
 
@@ -662,6 +750,39 @@ export function SettingsPage() {
         <div style={{ fontWeight: 700 }}>{user?.email}</div>
         <div style={{ color: colors.muted, marginTop: 3 }}>Credits: {user?.credit_balance}</div>
         <div style={{ color: colors.muted }}>BYOK: {user?.has_byok_key ? "saved" : "not set"}</div>
+      </div>
+
+      <div
+        style={{
+          background: colors.paper,
+          borderRadius: 12,
+          padding: 12,
+          border: `1px solid ${colors.lineSoft}`,
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ fontWeight: 650, fontSize: 14, marginBottom: 4 }}>Google Calendar</div>
+        <p style={{ margin: "0 0 10px", color: colors.muted, fontSize: 12 }}>
+          {calendarConnected
+            ? "Your Google events appear quietly on the month view."
+            : "Connect once — LifeOS reads your primary calendar (no edits)."}
+        </p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          {calendarConnected ? (
+            <>
+              <Button variant="ghost" disabled={calendarBusy} onClick={() => void syncCalendar()}>
+                Sync now
+              </Button>
+              <Button variant="ghost" disabled={calendarBusy} onClick={() => void disconnectCalendar()}>
+                Disconnect
+              </Button>
+            </>
+          ) : (
+            <Button disabled={calendarBusy} onClick={() => void connectCalendar()}>
+              {calendarBusy ? "Opening…" : "Connect Google Calendar"}
+            </Button>
+          )}
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>

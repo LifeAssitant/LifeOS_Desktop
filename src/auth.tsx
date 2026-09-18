@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import { api, clearTokens, getAccessToken, saveTokens, User } from "./api";
+import { sessionFromDeepLink, startGoogleOAuth } from "./supabase";
 
 type AuthState = {
   user: User | null;
@@ -15,6 +16,7 @@ type AuthState = {
   offlineHint: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   setOfflineHint: (v: string | null) => void;
@@ -33,6 +35,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setOfflineHint(null);
   }, []);
 
+  const finishGoogleSession = useCallback(
+    async (accessToken: string) => {
+      const tokens = await api.loginWithGoogle(accessToken);
+      saveTokens(tokens);
+      await refreshUser();
+    },
+    [refreshUser]
+  );
+
   useEffect(() => {
     (async () => {
       try {
@@ -45,6 +56,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })();
   }, [refreshUser]);
+
+  useEffect(() => {
+    if (!window.lifeosDesktop?.onAuthUrl) return;
+    const unsubscribe = window.lifeosDesktop.onAuthUrl(async (url) => {
+      try {
+        if (url.includes("calendar-connected")) {
+          window.dispatchEvent(new CustomEvent("lifeos-calendar-connected"));
+          return;
+        }
+        const session = await sessionFromDeepLink(url);
+        if (session?.access_token) {
+          await finishGoogleSession(session.access_token);
+        }
+      } catch (err) {
+        console.error(err);
+        setOfflineHint(
+          err instanceof Error ? err.message : "Google sign-in failed"
+        );
+      }
+    });
+    return unsubscribe;
+  }, [finishGoogleSession]);
 
   const login = useCallback(
     async (email: string, password: string) => {
@@ -64,6 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [refreshUser]
   );
 
+  const loginWithGoogle = useCallback(async () => {
+    await startGoogleOAuth();
+  }, []);
+
   const logout = useCallback(() => {
     clearTokens();
     setUser(null);
@@ -76,11 +113,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       offlineHint,
       login,
       register,
+      loginWithGoogle,
       logout,
       refreshUser,
       setOfflineHint,
     }),
-    [user, loading, offlineHint, login, register, logout, refreshUser]
+    [
+      user,
+      loading,
+      offlineHint,
+      login,
+      register,
+      loginWithGoogle,
+      logout,
+      refreshUser,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

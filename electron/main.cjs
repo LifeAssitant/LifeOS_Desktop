@@ -1,10 +1,49 @@
-const { app, BrowserWindow, Tray, Menu, Notification, nativeImage, ipcMain } = require("electron");
+const { app, BrowserWindow, Tray, Menu, Notification, nativeImage, ipcMain, shell } = require("electron");
 const path = require("path");
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
 let tray = null;
 let pollTimer = null;
+
+const PROTOCOL = "lifeos";
+
+function sendAuthUrl(url) {
+  if (!mainWindow) return;
+  mainWindow.webContents.send("lifeos-auth-url", url);
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function extractProtocolUrl(argv) {
+  return (argv || []).find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}://`));
+}
+
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
+      path.resolve(process.argv[1]),
+    ]);
+  }
+} else {
+  app.setAsDefaultProtocolClient(PROTOCOL);
+}
+
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (_event, argv) => {
+    const url = extractProtocolUrl(argv);
+    if (url) sendAuthUrl(url);
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -28,6 +67,8 @@ function createWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
+    const bootUrl = extractProtocolUrl(process.argv);
+    if (bootUrl) sendAuthUrl(bootUrl);
   });
 
   if (isDev) {
@@ -100,6 +141,14 @@ ipcMain.handle("register-desktop-token", () => {
   return `desktop-${app.getVersion()}-${process.pid}`;
 });
 
+ipcMain.handle("open-external", async (_event, url) => {
+  if (typeof url === "string" && (url.startsWith("https://") || url.startsWith("http://"))) {
+    await shell.openExternal(url);
+    return true;
+  }
+  return false;
+});
+
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null);
   createWindow();
@@ -111,12 +160,16 @@ app.whenReady().then(() => {
   });
 });
 
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  if (url && url.startsWith(`${PROTOCOL}://`)) sendAuthUrl(url);
+});
+
 app.on("before-quit", () => {
   app.isQuitting = true;
   if (pollTimer) clearInterval(pollTimer);
 });
 
 app.on("window-all-closed", () => {
-  // Keep tray alive on Windows/Linux
   if (process.platform === "darwin") app.quit();
 });

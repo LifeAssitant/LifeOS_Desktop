@@ -118,6 +118,7 @@ export type User = {
   has_byok_key: boolean;
   remind_before_minutes: number;
   quiet_hours_enabled: boolean;
+  google_calendar_connected?: boolean;
 };
 
 export type Task = {
@@ -127,7 +128,7 @@ export type Task = {
   due_at: string | null;
   remind_at?: string | null;
   status: "open" | "done";
-  source?: "chat" | "manual";
+  source?: "chat" | "manual" | "google";
 };
 
 export type EventItem = {
@@ -138,7 +139,8 @@ export type EventItem = {
   end_at: string | null;
   location: string | null;
   remind_at?: string | null;
-  source?: "chat" | "manual";
+  source?: "chat" | "manual" | "google";
+  external_id?: string | null;
 };
 
 export type ChatMessage = {
@@ -169,6 +171,12 @@ export const api = {
     apiFetch<TokenPair>(
       "/auth/login",
       { method: "POST", body: JSON.stringify({ email, password }) },
+      false
+    ),
+  loginWithGoogle: (access_token: string) =>
+    apiFetch<TokenPair>(
+      "/auth/google",
+      { method: "POST", body: JSON.stringify({ access_token }) },
       false
     ),
   me: () => apiFetch<User>("/me"),
@@ -219,4 +227,14 @@ export const api = {
     apiFetch<{ checkout_url: string }>("/billing/checkout", { method: "POST" }),
   pendingDesktop: () =>
     apiFetch<NotificationItem[]>("/notifications/pending/desktop"),
+  googleCalendarStatus: () =>
+    apiFetch<{ connected: boolean }>("/calendar/google/status"),
+  googleCalendarConnect: () =>
+    apiFetch<{ url: string }>("/calendar/google/connect"),
+  googleCalendarSync: () =>
+    apiFetch<{ synced: number; removed: number }>("/calendar/google/sync", {
+      method: "POST",
+    }),
+  googleCalendarDisconnect: () =>
+    apiFetch<{ connected: boolean }>("/calendar/google", { method: "DELETE" }),
 };

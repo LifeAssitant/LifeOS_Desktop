@@ -25,15 +25,6 @@ type LifeData = {
 
 const LifeDataContext = createContext<LifeData | null>(null);
 
-declare global {
-  interface Window {
-    lifeosDesktop?: {
-      notify: (title: string, body: string) => Promise<boolean>;
-      getDesktopToken: () => Promise<string>;
-    };
-  }
-}
-
 function notifyLocal(title: string, body: string) {
   if (window.lifeosDesktop) {
     void window.lifeosDesktop.notify(title, body);

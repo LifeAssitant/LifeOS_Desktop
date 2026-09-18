@@ -2,15 +2,6 @@ import { useEffect } from "react";
 
 import { api, getAccessToken } from "./api";
 
-declare global {
-  interface Window {
-    lifeosDesktop?: {
-      notify: (title: string, body: string) => Promise<boolean>;
-      getDesktopToken: () => Promise<string>;
-    };
-  }
-}
-
 async function showNotice(title: string, body: string) {
   if (window.lifeosDesktop) {
     await window.lifeosDesktop.notify(title, body);
