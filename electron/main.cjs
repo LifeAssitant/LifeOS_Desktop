@@ -8,17 +8,26 @@ let pollTimer = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 740,
-    minWidth: 880,
-    minHeight: 600,
-    backgroundColor: "#F7F1EA",
+    width: 1180,
+    height: 760,
+    minWidth: 960,
+    minHeight: 640,
+    backgroundColor: "#EFE8DC",
     title: "LifeOS",
+    show: false,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  mainWindow.setMenu(null);
+  mainWindow.setMenuBarVisibility(false);
+
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
   });
 
   if (isDev) {
@@ -36,7 +45,11 @@ function createWindow() {
 }
 
 function createTray() {
-  const icon = nativeImage.createEmpty();
+  const iconPath = path.join(__dirname, "icon.png");
+  let icon = nativeImage.createFromPath(iconPath);
+  if (icon.isEmpty()) {
+    icon = nativeImage.createEmpty();
+  }
   tray = new Tray(icon);
   tray.setToolTip("LifeOS");
   const contextMenu = Menu.buildFromTemplate([
@@ -88,6 +101,7 @@ ipcMain.handle("register-desktop-token", () => {
 });
 
 app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
   createWindow();
   createTray();
 

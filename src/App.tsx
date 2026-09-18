@@ -2,14 +2,7 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { AuthProvider, useAuth } from "./auth";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
-import {
-  AppLayout,
-  CalendarPage,
-  HomePage,
-  RequireAuth,
-  SettingsPage,
-  TasksPage,
-} from "./pages/AppPages";
+import { AppLayout, HomePage, RequireAuth, SettingsPage } from "./pages/AppPages";
 import { OnboardingPage } from "./pages/OnboardingPage";
 
 function OnboardingGate() {
@@ -37,8 +30,8 @@ export default function App() {
             }
           >
             <Route index element={<HomePage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="tasks" element={<TasksPage />} />
+            <Route path="calendar" element={<Navigate to="/" replace />} />
+            <Route path="tasks" element={<Navigate to="/" replace />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>

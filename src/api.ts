@@ -125,15 +125,20 @@ export type Task = {
   title: string;
   notes: string | null;
   due_at: string | null;
+  remind_at?: string | null;
   status: "open" | "done";
+  source?: "chat" | "manual";
 };
 
 export type EventItem = {
   id: string;
   title: string;
+  notes?: string | null;
   start_at: string;
   end_at: string | null;
   location: string | null;
+  remind_at?: string | null;
+  source?: "chat" | "manual";
 };
 
 export type ChatMessage = {
@@ -141,6 +146,7 @@ export type ChatMessage = {
   role: "user" | "assistant" | "system";
   content: string;
   actions?: Array<{ type: string; summary: string; entity_id?: string; undone?: boolean }> | null;
+  linked_entity_ids?: string[] | null;
   created_at: string;
 };
 
@@ -173,10 +179,21 @@ export const api = {
   today: () => apiFetch<{ tasks: Task[]; events: EventItem[] }>("/today"),
   tasks: (status?: string) =>
     apiFetch<Task[]>(status ? `/tasks?status=${status}` : "/tasks"),
-  createTask: (body: { title: string; due_at?: string }) =>
+  createTask: (body: { title: string; due_at?: string; notes?: string }) =>
     apiFetch<Task>("/tasks", { method: "POST", body: JSON.stringify(body) }),
   completeTask: (id: string) =>
     apiFetch<Task>(`/tasks/${id}/complete`, { method: "POST" }),
+  deleteTask: (id: string) =>
+    apiFetch<void>(`/tasks/${id}`, { method: "DELETE" }),
+  createEvent: (body: {
+    title: string;
+    start_at: string;
+    end_at?: string;
+    location?: string;
+    notes?: string;
+  }) => apiFetch<EventItem>("/events", { method: "POST", body: JSON.stringify(body) }),
+  deleteEvent: (id: string) =>
+    apiFetch<void>(`/events/${id}`, { method: "DELETE" }),
   events: (from?: string, to?: string) => {
     const q = new URLSearchParams();
     if (from) q.set("from", from);
@@ -188,7 +205,10 @@ export const api = {
   chatSend: (message: string) =>
     apiFetch<ChatMessage>("/chat/send", {
       method: "POST",
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({
+        message,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
     }),
   chatUndo: (message_id: string, action_index = 0) =>
     apiFetch<{ ok: boolean }>("/chat/undo", {

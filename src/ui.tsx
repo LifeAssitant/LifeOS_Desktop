@@ -1,40 +1,55 @@
 import { CSSProperties, FormEvent, ReactNode } from "react";
 
-import { colors } from "./theme";
+import { colors, fonts, radii } from "./theme";
 
 export function Shell({ children }: { children: ReactNode }) {
-  return <div style={styles.shell}>{children}</div>;
+  return <div className="lifeos-shell">{children}</div>;
 }
 
-export function Card({ children, style }: { children: ReactNode; style?: CSSProperties }) {
-  return <div style={{ ...styles.card, ...style }}>{children}</div>;
+export function Card({
+  children,
+  style,
+  className,
+}: {
+  children: ReactNode;
+  style?: CSSProperties;
+  className?: string;
+}) {
+  return (
+    <div className={className} style={{ ...styles.card, ...style }}>
+      {children}
+    </div>
+  );
 }
 
 export function Companion({ size = 48 }: { size?: number }) {
+  const eye = Math.max(5, Math.round(size * 0.12));
   return (
     <div
       style={{
         width: size,
         height: size,
         borderRadius: size / 2,
-        background: colors.peachSoft,
-        border: `2px solid ${colors.peach}`,
+        background: `linear-gradient(145deg, ${colors.apricotSoft}, ${colors.mossSoft})`,
+        border: `1.5px solid ${colors.line}`,
+        boxShadow: `inset 0 -6px 14px rgba(31,26,22,0.06)`,
         display: "grid",
         placeItems: "center",
       }}
+      aria-hidden
     >
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-        <div style={{ display: "flex", gap: 8 }}>
-          <span style={styles.eye} />
-          <span style={styles.eye} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: size * 0.04 }}>
+        <div style={{ display: "flex", gap: size * 0.16 }}>
+          <span className="companion-eye" style={{ ...styles.eye, width: eye, height: eye }} />
+          <span className="companion-eye" style={{ ...styles.eye, width: eye, height: eye }} />
         </div>
         <span
           style={{
-            width: 14,
-            height: 7,
+            width: size * 0.28,
+            height: size * 0.14,
             border: `2px solid ${colors.ink}`,
             borderTop: "none",
-            borderRadius: "0 0 10px 10px",
+            borderRadius: "0 0 12px 12px",
           }}
         />
       </div>
@@ -51,22 +66,31 @@ export function Button({
 }: {
   children: ReactNode;
   onClick?: () => void;
-  variant?: "primary" | "ghost" | "danger";
+  variant?: "primary" | "ghost" | "danger" | "moss";
   type?: "button" | "submit";
   disabled?: boolean;
 }) {
   const background =
-    variant === "primary" ? colors.peach : variant === "danger" ? colors.blush : "transparent";
+    variant === "primary"
+      ? colors.apricot
+      : variant === "moss"
+        ? colors.moss
+        : variant === "danger"
+          ? colors.blush
+          : "transparent";
+  const color = variant === "moss" ? colors.paper : colors.ink;
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
+      className="soft-btn"
       style={{
         ...styles.button,
         background,
+        color,
         border: variant === "ghost" ? `1px solid ${colors.line}` : "none",
-        opacity: disabled ? 0.6 : 1,
+        opacity: disabled ? 0.55 : 1,
       }}
     >
       {children}
@@ -116,58 +140,79 @@ export function AuthForm({
 }) {
   return (
     <Shell>
-      <div style={styles.authWrap}>
-        <Companion size={64} />
+      <div style={styles.authWrap} className="fade-up">
+        <Companion size={72} />
         <h1 style={styles.brand}>LifeOS</h1>
-        <p style={styles.muted}>{subtitle}</p>
-        <Card style={{ width: 360, display: "flex", flexDirection: "column", gap: 12 }}>
-          <h2 style={{ margin: 0, color: colors.ink }}>{title}</h2>
-          <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <p style={styles.lede}>{subtitle}</p>
+        <div style={styles.authPanel}>
+          <h2 style={styles.authTitle}>{title}</h2>
+          <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {children}
           </form>
-          {footer}
-        </Card>
+          <div style={{ marginTop: 16 }}>{footer}</div>
+        </div>
       </div>
     </Shell>
   );
 }
 
+export function PageTitle({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <header style={{ marginBottom: 20 }}>
+      <h1 style={styles.pageTitle}>{title}</h1>
+      {subtitle ? <p style={styles.pageSub}>{subtitle}</p> : null}
+    </header>
+  );
+}
+
+export function EmptyHint({ children }: { children: ReactNode }) {
+  return <p style={{ color: colors.muted, margin: 0, lineHeight: 1.5 }}>{children}</p>;
+}
+
 const styles: Record<string, CSSProperties> = {
-  shell: {
-    minHeight: "100vh",
-    background: `radial-gradient(circle at top left, ${colors.peachSoft}, transparent 40%), radial-gradient(circle at bottom right, ${colors.mintSoft}, transparent 35%), ${colors.bg}`,
-    color: colors.ink,
-    fontFamily: '"Segoe UI", "Nunito", system-ui, sans-serif',
-  },
   card: {
-    background: colors.card,
-    border: `1px solid ${colors.line}`,
-    borderRadius: 18,
+    background: colors.paper,
+    border: `1px solid ${colors.lineSoft}`,
+    borderRadius: radii.lg,
     padding: 16,
+    boxShadow: "0 10px 30px rgba(31,26,22,0.04)",
   },
   eye: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    borderRadius: 999,
     background: colors.ink,
     display: "inline-block",
+    transformOrigin: "center",
   },
   button: {
-    borderRadius: 999,
-    padding: "10px 16px",
-    fontWeight: 700,
+    borderRadius: radii.pill,
+    padding: "8px 14px",
+    fontWeight: 650,
     cursor: "pointer",
-    color: colors.ink,
+    letterSpacing: 0.01,
+    fontSize: 13,
   },
-  field: { display: "flex", flexDirection: "column", gap: 6 },
-  label: { fontSize: 13, color: colors.muted, fontWeight: 600 },
+  field: { display: "flex", flexDirection: "column", gap: 5 },
+  label: {
+    fontSize: 11,
+    color: colors.muted,
+    fontWeight: 650,
+    letterSpacing: 0.04,
+    textTransform: "uppercase",
+  },
   input: {
-    borderRadius: 14,
+    borderRadius: 12,
     border: `1px solid ${colors.line}`,
     padding: "10px 12px",
-    fontSize: 15,
+    fontSize: 14,
     background: colors.bgSoft,
     color: colors.ink,
+    outline: "none",
   },
   authWrap: {
     minHeight: "100vh",
@@ -176,7 +221,48 @@ const styles: Record<string, CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    padding: 24,
   },
-  brand: { margin: 0, fontSize: 34, letterSpacing: -0.5 },
-  muted: { color: colors.muted, marginTop: 0 },
+  brand: {
+    margin: "4px 0 0",
+    fontFamily: fonts.display,
+    fontSize: 42,
+    fontWeight: 700,
+    letterSpacing: -1,
+    color: colors.ink,
+  },
+  lede: {
+    color: colors.muted,
+    margin: "0 0 14px",
+    fontSize: 15,
+    maxWidth: 320,
+    textAlign: "center",
+    lineHeight: 1.45,
+  },
+  authPanel: {
+    width: "min(380px, 100%)",
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  },
+  authTitle: {
+    margin: "0 0 10px",
+    fontFamily: fonts.display,
+    fontSize: 24,
+    fontWeight: 600,
+    color: colors.ink,
+  },
+  pageTitle: {
+    margin: 0,
+    fontFamily: fonts.display,
+    fontSize: 26,
+    fontWeight: 650,
+    letterSpacing: -0.4,
+    color: colors.ink,
+  },
+  pageSub: {
+    margin: "4px 0 0",
+    color: colors.muted,
+    fontSize: 13,
+  },
 };

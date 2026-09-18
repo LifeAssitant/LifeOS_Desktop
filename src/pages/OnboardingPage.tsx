@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 
 import { api } from "../api";
 import { useAuth } from "../auth";
+import { colors, fonts, radii } from "../theme";
 import { Button, Companion, Shell } from "../ui";
-import { colors } from "../theme";
 
 const steps = [
-  { title: "Talk it out", body: "Tell LifeOS what you need. It turns words into tasks." },
-  { title: "See your day", body: "A simple calendar — just what’s next." },
-  { title: "Gentle nudges", body: "Tray notifications when something’s due or still open." },
+  { title: "Talk it out", body: "Tell LifeOS what you need. It turns words into tasks and events." },
+  { title: "See your day", body: "A calm calendar and task list — just what’s next." },
+  { title: "Gentle nudges", body: "Desktop tray notifications when something’s due or still open." },
 ];
 
 export function OnboardingPage() {
@@ -30,22 +30,37 @@ export function OnboardingPage() {
 
   return (
     <Shell>
-      <div style={{ maxWidth: 520, margin: "0 auto", padding: 40 }}>
-        <Companion size={72} />
-        <h1 style={{ color: colors.ink }}>Welcome to LifeOS</h1>
-        <div style={{ display: "grid", gap: 12, marginBottom: 24 }}>
-          {steps.map((s) => (
+      <div className="fade-up" style={{ maxWidth: 540, margin: "0 auto", padding: "56px 28px" }}>
+        <Companion size={80} />
+        <h1
+          style={{
+            fontFamily: fonts.display,
+            fontSize: 40,
+            letterSpacing: -0.8,
+            margin: "16px 0 8px",
+            color: colors.ink,
+          }}
+        >
+          Welcome to LifeOS
+        </h1>
+        <p style={{ color: colors.muted, marginTop: 0, marginBottom: 28, lineHeight: 1.5 }}>
+          A warm companion for an overwhelmed mind — simple on purpose.
+        </p>
+        <div style={{ display: "grid", gap: 12, marginBottom: 28 }}>
+          {steps.map((s, i) => (
             <div
               key={s.title}
+              className="fade-up"
               style={{
-                background: colors.card,
-                border: `1px solid ${colors.line}`,
-                borderRadius: 16,
+                background: colors.paper,
+                border: `1px solid ${colors.lineSoft}`,
+                borderRadius: radii.lg,
                 padding: 16,
+                animationDelay: `${i * 80}ms`,
               }}
             >
-              <strong>{s.title}</strong>
-              <p style={{ margin: "6px 0 0", color: colors.muted }}>{s.body}</p>
+              <strong style={{ fontFamily: fonts.display, fontSize: 20 }}>{s.title}</strong>
+              <p style={{ margin: "6px 0 0", color: colors.muted, lineHeight: 1.45 }}>{s.body}</p>
             </div>
           ))}
         </div>
