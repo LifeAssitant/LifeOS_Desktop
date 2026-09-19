@@ -8,6 +8,7 @@ const {
   ipcMain,
   screen,
   shell,
+  session,
 } = require("electron");
 const fs = require("fs");
 const path = require("path");
@@ -297,6 +298,16 @@ ipcMain.handle("open-external", async (_event, url) => {
 });
 
 app.whenReady().then(() => {
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(
+      permission === "media" ||
+        permission === "audioCapture" ||
+        permission === "microphone" ||
+        permission === "notifications" ||
+        permission === "clipboard-sanitized-write"
+    );
+  });
+
   Menu.setApplicationMenu(null);
   createWindow();
   createTray();

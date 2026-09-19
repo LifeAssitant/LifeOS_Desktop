@@ -19,6 +19,16 @@ import { useDesktopNotifications } from "../notifications";
 import { colors } from "../theme";
 import { Tour, requestTour } from "../tour";
 import { AccountMenu, Button, Companion, EmptyHint, Field, Shell } from "../ui";
+import {
+  getSpeakReplies,
+  isSpeaking,
+  setSpeakReplies,
+  speakReply,
+  startVoiceListen,
+  stopSpeaking,
+  stopVoiceListen,
+  type VoiceStatus,
+} from "../voice";
 
 type PlanChrome = { count: number; open: boolean; onToggle: () => void };
 
@@ -212,8 +222,16 @@ export function HomePage() {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [voice, setVoice] = useState<VoiceStatus>("idle");
+  const [speaking, setSpeaking] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sendingRef = useRef(false);
+  const voiceRef = useRef<VoiceStatus>("idle");
+
+  useEffect(() => {
+    voiceRef.current = voice;
+  }, [voice]);
 
   useEffect(() => {
     void refreshAll();
@@ -296,15 +314,17 @@ export function HomePage() {
     const el = bottomRef.current?.parentElement;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, sending]);
+  }, [messages, sending, voice]);
 
-  const send = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!draft.trim() || sending) return;
+  const sendText = async (raw: string, fromVoice = false) => {
+    const text = raw.trim();
+    if (!text || sendingRef.current) return;
+    sendingRef.current = true;
     setSending(true);
     setError("");
-    const text = draft.trim();
     setDraft("");
+    stopSpeaking();
+    setSpeaking(false);
     const optimistic: ChatMessage = {
       id: `local-user-${Date.now()}`,
       role: "user",
@@ -317,6 +337,14 @@ export function HomePage() {
       setMessages((prev) => [...prev.filter((m) => m.id !== optimistic.id), optimistic, reply]);
       await refreshAll();
       await loadChat();
+
+      if (fromVoice) {
+        speakReply(reply.content);
+        setSpeaking(true);
+        window.setTimeout(() => {
+          if (!isSpeaking()) setSpeaking(false);
+        }, Math.min(12000, Math.max(1800, reply.content.length * 45)));
+      }
 
       const entityId =
         reply.linked_entity_ids?.[0] ||
@@ -344,9 +372,72 @@ export function HomePage() {
       setDraft(text);
       setError(err instanceof Error ? err.message : "Chat failed");
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };
+
+  const send = async (e: FormEvent) => {
+    e.preventDefault();
+    await sendText(draft);
+  };
+
+  const finishVoice = async () => {
+    if (voiceRef.current !== "listening") return;
+    const fromBox = draft.trim();
+    setVoice("transcribing");
+    try {
+      const fromEngine = await stopVoiceListen();
+      setVoice("idle");
+      const text = (fromBox || fromEngine).trim();
+      if (!text) {
+        setError("I couldn't hear anything. Tap the mic, speak, then tap again to send.");
+        return;
+      }
+      setDraft(text);
+      await sendText(text, true);
+    } catch (err) {
+      setVoice("idle");
+      setError(err instanceof Error ? err.message : "Voice didn't come through");
+    }
+  };
+
+  const beginVoice = async () => {
+    if (sendingRef.current || voiceRef.current !== "idle") return;
+    setError("");
+    setDraft("");
+    try {
+      await startVoiceListen((partial) => setDraft(partial));
+      setVoice("listening");
+    } catch (err) {
+      setVoice("idle");
+      const message = err instanceof Error ? err.message : "Microphone is blocked";
+      setError(
+        message.toLowerCase().includes("denied") || message.toLowerCase().includes("not allowed")
+          ? "Allow the microphone to talk to LifeOS."
+          : message
+      );
+    }
+  };
+
+  const onMicClick = () => {
+    if (speaking) {
+      stopSpeaking();
+      setSpeaking(false);
+    }
+    if (voiceRef.current === "listening") {
+      void finishVoice();
+      return;
+    }
+    if (voiceRef.current === "idle") void beginVoice();
+  };
+
+  useEffect(() => {
+    return () => {
+      void stopVoiceListen(true);
+      stopSpeaking();
+    };
+  }, []);
 
   const undo = async (messageId: string, index: number) => {
     await api.chatUndo(messageId, index);
@@ -407,7 +498,26 @@ export function HomePage() {
               {m.role === "user" ? (
                 <div className="md-plain">{m.content}</div>
               ) : (
-                <Markdown text={m.content} />
+                <>
+                  <Markdown text={m.content} />
+                  <button
+                    type="button"
+                    className={`chat-speak${speaking ? " is-on" : ""}`}
+                    aria-label={speaking ? "Stop speaking" : "Listen to this reply"}
+                    title={speaking ? "Stop" : "Listen"}
+                    onClick={() => {
+                      if (isSpeaking()) {
+                        stopSpeaking();
+                        setSpeaking(false);
+                        return;
+                      }
+                      speakReply(m.content);
+                      setSpeaking(true);
+                    }}
+                  >
+                    <SpeakerIcon />
+                  </button>
+                </>
               )}
               {m.actions?.some((a) => !a.undone) ? (
                 <div className="chat-actions">
@@ -427,28 +537,55 @@ export function HomePage() {
             </div>
           ))}
 
-          {sending ? (
+          {voice === "listening" ? (
+            <div className="chat-bubble is-user is-live">
+              <div className="md-plain">
+                {draft.trim() ? draft : "Listening…"}
+                <span className="live-caret" aria-hidden>
+                  |
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          {sending || voice === "transcribing" ? (
             <div className="chat-thinking fade-in">
               <i />
-              Working on it
+              {voice === "transcribing" ? "Hearing you" : "Working on it"}
+            </div>
+          ) : voice === "listening" ? (
+            <div className="chat-thinking fade-in is-listen">
+              <i />
+              Listening — click the mic again to send
             </div>
           ) : null}
           <div ref={bottomRef} />
         </div>
 
         <div>
-          <form onSubmit={send} className="composer" data-tour="composer">
+          <form onSubmit={send} className={`composer${voice === "listening" ? " is-listening" : ""}`} data-tour="composer">
             <input
               ref={inputRef}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Talk to LifeOS…"
+              placeholder={voice === "listening" ? "Words appear as you speak…" : "Talk to LifeOS…"}
               aria-label="Message LifeOS"
+              disabled={voice === "transcribing" || sending}
             />
+            <button
+              type="button"
+              className={`composer-mic${voice === "listening" ? " is-live" : ""}`}
+              aria-label={voice === "listening" ? "Stop and send" : "Talk"}
+              title={voice === "listening" ? "Click to send" : "Click to talk"}
+              disabled={sending || voice === "transcribing"}
+              onClick={onMicClick}
+            >
+              <MicIcon />
+            </button>
             <button
               type="submit"
               className="composer-send"
-              disabled={sending || !draft.trim()}
+              disabled={sending || !draft.trim() || voice !== "idle"}
               aria-label="Send message"
             >
               <SendIcon />
@@ -625,6 +762,39 @@ function SendIcon() {
   );
 }
 
+function MicIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="9" y="3.5" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17v3.2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function SpeakerIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4.5 9.5v5h3.2L12.5 18V6L7.7 9.5H4.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16 9.2a4 4 0 0 1 0 5.6M18.4 7a7 7 0 0 1 0 10"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function SparkIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -681,6 +851,7 @@ export function SettingsPage() {
     Boolean(user?.google_calendar_connected)
   );
   const [calendarBusy, setCalendarBusy] = useState(false);
+  const [speakReplies, setSpeakRepliesOn] = useState(() => getSpeakReplies());
 
   useEffect(() => {
     setCalendarConnected(Boolean(user?.google_calendar_connected));
@@ -810,6 +981,36 @@ export function SettingsPage() {
                 {calendarBusy ? "Opening…" : "Connect Google Calendar"}
               </Button>
             )}
+          </div>
+        </div>
+
+        <div className="settings-block">
+          <div className="settings-block-title">Voice</div>
+          <p className="settings-note">
+            Click the mic to talk. After you do, LifeOS can read its reply out loud.
+          </p>
+          <div className="segmented">
+            <button
+              type="button"
+              className={speakReplies ? "is-active" : undefined}
+              onClick={() => {
+                setSpeakReplies(true);
+                setSpeakRepliesOn(true);
+              }}
+            >
+              Speak replies
+            </button>
+            <button
+              type="button"
+              className={!speakReplies ? "is-active" : undefined}
+              onClick={() => {
+                setSpeakReplies(false);
+                setSpeakRepliesOn(false);
+                stopSpeaking();
+              }}
+            >
+              Text only
+            </button>
           </div>
         </div>
 

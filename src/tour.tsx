@@ -52,7 +52,7 @@ const STEPS: Step[] = [
     target: '[data-tour="composer"]',
     eyebrow: "Talk, don't fill forms",
     title: "Say it in plain words",
-    body: "“Dentist Thursday at 4, remind me an hour before.” LifeOS writes the task, books the time and sets the reminder.",
+    body: "Type, or click the mic and talk. “Dentist Thursday at 4, remind me an hour before.” LifeOS writes the task, books the time and sets the reminder.",
   },
   {
     id: "suggestions",

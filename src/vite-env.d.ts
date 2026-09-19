@@ -23,4 +23,6 @@ interface LifeosDesktopBridge {
 
 interface Window {
   lifeosDesktop?: LifeosDesktopBridge;
+  SpeechRecognition?: new () => unknown;
+  webkitSpeechRecognition?: new () => unknown;
 }
