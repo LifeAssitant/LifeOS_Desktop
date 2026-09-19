@@ -17,6 +17,7 @@ import { LifeDataProvider, useLifeData } from "../data";
 import { Markdown } from "../markdown";
 import { useDesktopNotifications } from "../notifications";
 import { colors } from "../theme";
+import { Tour, requestTour } from "../tour";
 import { AccountMenu, Button, Companion, EmptyHint, Field, Shell } from "../ui";
 
 type PlanChrome = { count: number; open: boolean; onToggle: () => void };
@@ -91,6 +92,7 @@ function Layout() {
                 <button
                   type="button"
                   className="pill-btn"
+                  data-tour="mini"
                   title="Shrink to a corner widget"
                   onClick={() => void window.lifeosDesktop?.enterMini()}
                 >
@@ -102,6 +104,7 @@ function Layout() {
                 <button
                   type="button"
                   className={`pill-btn${planChrome.open ? " is-active" : ""}`}
+                  data-tour="plan"
                   onClick={planChrome.onToggle}
                 >
                   <CalendarIcon />
@@ -120,6 +123,7 @@ function Layout() {
             <Outlet />
           </main>
         </div>
+        <Tour />
       </Shell>
     </PlanChromeContext.Provider>
   );
@@ -378,7 +382,7 @@ export function HomePage() {
                 Describe it the way you would to a friend. LifeOS writes the tasks, books the time
                 and sets the reminders.
               </p>
-              <div className="suggestion-grid">
+              <div className="suggestion-grid" data-tour="suggestions">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s.title}
@@ -433,7 +437,7 @@ export function HomePage() {
         </div>
 
         <div>
-          <form onSubmit={send} className="composer">
+          <form onSubmit={send} className="composer" data-tour="composer">
             <input
               ref={inputRef}
               value={draft}
@@ -668,6 +672,7 @@ function BroomIcon() {
 export function SettingsPage() {
   const { user, refreshUser } = useAuth();
   const { refreshAll } = useLifeData();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<"hosted" | "byok">(user?.ai_mode ?? "hosted");
   const [key, setKey] = useState("");
   const [remindBefore, setRemindBefore] = useState(String(user?.remind_before_minutes ?? 15));
@@ -849,6 +854,20 @@ export function SettingsPage() {
             onChange={setRemindBefore}
             type="number"
           />
+        </div>
+
+        <div className="settings-block">
+          <div className="settings-block-title">Walkthrough</div>
+          <p className="settings-note">Replay the short tour of the app.</p>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              requestTour();
+              navigate("/");
+            }}
+          >
+            Show me around again
+          </Button>
         </div>
 
         <div className="settings-row" style={{ paddingBottom: 4 }}>

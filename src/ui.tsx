@@ -206,7 +206,7 @@ export function AccountMenu({
   }, [open]);
 
   return (
-    <div className="account-menu" ref={ref}>
+    <div className="account-menu" ref={ref} data-tour="account">
       <button
         type="button"
         className="account-trigger"

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
 import { colors } from "../theme";
+import { requestTour } from "../tour";
 import { Button, Companion, Shell, ThemeToggle } from "../ui";
 
 const steps = [
@@ -36,6 +37,7 @@ export function OnboardingPage() {
     setLoading(true);
     try {
       await api.updateMe({ onboarding_completed: true });
+      requestTour();
       await refreshUser();
       navigate("/");
     } finally {
