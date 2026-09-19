@@ -3,6 +3,7 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
 import { AppLayout, HomePage, RequireAuth, SettingsPage } from "./pages/AppPages";
+import { AttunePage } from "./pages/AttunePage";
 import { MiniWidget } from "./pages/MiniWidget";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { ThemeProvider } from "./themeMode";
@@ -25,6 +26,14 @@ export default function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/onboarding" element={<OnboardingGate />} />
             <Route path="/mini" element={<MiniWidget />} />
+            <Route
+              path="/attune"
+              element={
+                <RequireAuth>
+                  <AttunePage />
+                </RequireAuth>
+              }
+            />
             <Route
               path="/"
               element={

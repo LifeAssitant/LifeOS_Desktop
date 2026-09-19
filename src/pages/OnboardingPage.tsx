@@ -39,7 +39,7 @@ export function OnboardingPage() {
       await api.updateMe({ onboarding_completed: true });
       requestTour();
       await refreshUser();
-      navigate("/");
+      navigate("/attune");
     } finally {
       setLoading(false);
     }

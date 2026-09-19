@@ -1612,6 +1612,346 @@ ol.md-list li::before {
   margin-bottom: 8px;
 }
 
+/* ========== Attune (audience questions) ========== */
+.attune-screen {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 26px;
+  overflow: auto;
+}
+
+.attune-card {
+  width: min(620px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px 28px 22px;
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  box-shadow:
+    inset 0 3px 6px var(--clay-hi),
+    inset 0 -8px 16px var(--clay-lo),
+    0 22px 48px var(--clay-drop);
+}
+
+.attune-head {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.attune-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  font-size: 24px;
+  color: var(--ink);
+}
+
+.attune-sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 380px;
+}
+
+.attune-count {
+  margin-left: auto;
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.attune-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--input-fill);
+  box-shadow:
+    inset 2px 2px 5px var(--clay-press-lo),
+    inset -2px -2px 5px var(--clay-press-hi);
+  overflow: hidden;
+}
+
+.attune-progress span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 320ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.attune-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 330px;
+}
+
+.attune-q {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: 19px;
+  color: var(--ink);
+}
+
+.attune-hint {
+  margin: -6px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.attune-input {
+  margin-top: 2px;
+}
+
+.attune-age {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.attune-age input {
+  width: 110px;
+}
+
+.chip-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: none;
+  cursor: pointer;
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  box-shadow:
+    inset 0 2px 4px var(--clay-hi),
+    inset 0 -3px 7px var(--clay-lo),
+    0 5px 12px var(--clay-drop);
+  transition:
+    transform 140ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.chip:hover {
+  transform: translateY(-1px);
+}
+
+.chip.is-on {
+  color: var(--accent-ink);
+  background: var(--accent);
+  box-shadow:
+    inset 0 2px 4px var(--on-accent-hi),
+    inset 0 -4px 8px var(--on-accent-lo),
+    0 8px 18px var(--clay-drop);
+}
+
+/* Busy basket — the pile in the basket is the answer. */
+.busy-basket {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.basket-yard {
+  position: relative;
+  height: 268px;
+  border-radius: var(--r-lg);
+  background: var(--input-fill);
+  box-shadow:
+    inset 4px 4px 9px var(--clay-press-lo),
+    inset -3px -3px 8px var(--clay-press-hi);
+  touch-action: none;
+  overflow: hidden;
+}
+
+.piece {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 17px;
+  cursor: grab;
+  background: var(--surface);
+  box-shadow:
+    inset 0 2px 5px var(--clay-hi),
+    inset 0 -4px 9px var(--clay-lo),
+    0 8px 16px var(--clay-drop);
+  animation: piece-bob 4.5s ease-in-out infinite;
+  transition: box-shadow 160ms ease;
+}
+
+.piece:nth-child(2n) {
+  animation-delay: -1.4s;
+}
+
+.piece:nth-child(3n) {
+  animation-delay: -2.6s;
+}
+
+.piece.is-dragging {
+  cursor: grabbing;
+  animation: none;
+  z-index: 5;
+  box-shadow:
+    inset 0 2px 5px var(--clay-hi),
+    inset 0 -4px 9px var(--clay-lo),
+    0 18px 30px var(--clay-drop-strong);
+}
+
+.basket {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  width: 220px;
+  height: 132px;
+  margin-left: -110px;
+  --basket-body: var(--surface-2);
+  --basket-rim: var(--surface);
+  --basket-weave: var(--line);
+  transition: transform 200ms ease;
+}
+
+.basket.is-hover {
+  transform: translateY(-4px) scale(1.03);
+  --basket-weave: var(--busy-color);
+}
+
+.basket-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 12px 22px var(--clay-drop));
+  pointer-events: none;
+}
+
+/* Pieces sit behind the weave so they read as "inside" the basket. */
+.basket-pile {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.piece.is-packed {
+  position: absolute;
+  top: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  cursor: pointer;
+  animation: piece-drop 320ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+
+.busy-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.busy-readout strong {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--busy-color);
+  transition: color 420ms ease;
+}
+
+.busy-readout span {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.age-well {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 26px 22px;
+  border-radius: var(--r-lg);
+  background: var(--input-fill);
+  box-shadow:
+    inset 4px 4px 9px var(--clay-press-lo),
+    inset -3px -3px 8px var(--clay-press-hi);
+}
+
+.age-input {
+  width: 150px;
+  border: none;
+  outline: none;
+  background: none;
+  text-align: center;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  font-size: 58px;
+  color: var(--accent);
+  appearance: textfield;
+}
+
+.age-input::-webkit-outer-spin-button,
+.age-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.age-well span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.attune-stage-center {
+  justify-content: center;
+  text-align: center;
+}
+
+@keyframes piece-bob {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+  50% {
+    margin-top: -5px;
+  }
+}
+
+@keyframes piece-drop {
+  from {
+    opacity: 0.4;
+    transform: translateY(-22px) scale(0.85) rotate(0deg);
+  }
+}
+
+.attune-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.attune-actions {
+  display: flex;
+  gap: 10px;
+}
+
 /* ========== First-run walkthrough ========== */
 .tour-root {
   position: fixed;

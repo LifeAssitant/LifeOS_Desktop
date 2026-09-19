@@ -119,6 +119,19 @@ export type User = {
   remind_before_minutes: number;
   quiet_hours_enabled: boolean;
   google_calendar_connected?: boolean;
+  profession?: string | null;
+  professions?: string[] | null;
+  age?: number | null;
+  busy_level?: number | null;
+  use_cases?: string[] | null;
+  profile_completed?: boolean;
+};
+
+export type ProfileSurvey = {
+  professions?: string[];
+  age?: number;
+  busy_level?: number;
+  use_cases?: string[];
 };
 
 export type Task = {
@@ -182,6 +195,8 @@ export const api = {
   me: () => apiFetch<User>("/me"),
   updateMe: (body: Record<string, unknown>) =>
     apiFetch<User>("/me", { method: "PATCH", body: JSON.stringify(body) }),
+  saveProfile: (body: ProfileSurvey) =>
+    apiFetch<User>("/me/profile", { method: "PUT", body: JSON.stringify(body) }),
   updateAi: (body: { ai_mode: "hosted" | "byok"; gemini_api_key?: string }) =>
     apiFetch<User>("/me/ai", { method: "PUT", body: JSON.stringify(body) }),
   today: () => apiFetch<{ tasks: Task[]; events: EventItem[] }>("/today"),
