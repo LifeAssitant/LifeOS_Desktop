@@ -19,7 +19,7 @@ function GoogleButton({
       type="button"
       onClick={onClick}
       disabled={loading}
-      className="clay-btn soft-btn auth-google"
+      className="auth-google"
     >
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
         <path
@@ -99,7 +99,7 @@ export function LoginPage() {
   return (
     <AuthForm
       title="Welcome back"
-      subtitle="Your calm AI life manager"
+      subtitle="Pick up where your day left off."
       onSubmit={onSubmit}
       footer={
         <p className="auth-switch">
@@ -175,7 +175,7 @@ export function RegisterPage() {
   return (
     <AuthForm
       title="Create your space"
-      subtitle="Plan gently. Stay clear."
+      subtitle="Two minutes to set up, then just talk to it."
       onSubmit={onSubmit}
       footer={
         <p className="auth-switch">

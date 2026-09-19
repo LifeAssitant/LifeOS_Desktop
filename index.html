@@ -6,27 +6,26 @@
     <title>LifeOS</title>
     <script>
       (function () {
+        var theme = "playful";
         try {
-          var s = localStorage.getItem("lifeos_theme_mode");
-          var c = localStorage.getItem("lifeos_color_scheme");
-          document.documentElement.setAttribute(
-            "data-style",
-            s === "glass" || s === "clay" ? s : "clay"
-          );
-          document.documentElement.setAttribute(
-            "data-scheme",
-            c === "dark" || c === "light" ? c : "light"
-          );
+          var stored = localStorage.getItem("lifeos_theme");
+          if (stored === "professional" || stored === "playful") theme = stored;
+          else {
+            var legacy = localStorage.getItem("lifeos_theme_mode");
+            if (legacy === "glass" || legacy === "ocean") theme = "professional";
+          }
         } catch (e) {
-          document.documentElement.setAttribute("data-style", "clay");
-          document.documentElement.setAttribute("data-scheme", "light");
+          /* first run */
         }
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.style.colorScheme =
+          theme === "professional" ? "dark" : "light";
       })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700&family=Outfit:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>

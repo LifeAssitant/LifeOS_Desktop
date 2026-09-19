@@ -3,13 +3,28 @@ import { useNavigate } from "react-router-dom";
 
 import { api } from "../api";
 import { useAuth } from "../auth";
-import { colors, fonts } from "../theme";
+import { colors } from "../theme";
 import { Button, Companion, Shell, ThemeToggle } from "../ui";
 
 const steps = [
-  { title: "Talk it out", body: "Tell LifeOS what you need. It turns words into tasks and events." },
-  { title: "See your day", body: "A calm calendar and task list — just what’s next." },
-  { title: "Gentle nudges", body: "Desktop tray notifications when something’s due or still open." },
+  {
+    title: "Talk it out",
+    body: "Tell LifeOS what you need in plain words. It writes the tasks and books the events.",
+    tone: colors.mint,
+    tint: "var(--mint-soft)",
+  },
+  {
+    title: "See your day",
+    body: "A month view and a day list, side by side with the conversation.",
+    tone: colors.peach,
+    tint: "var(--peach-soft)",
+  },
+  {
+    title: "Get nudged",
+    body: "Desktop notifications arrive before something starts or slips.",
+    tone: colors.sky,
+    tint: "var(--sky-soft)",
+  },
 ];
 
 export function OnboardingPage() {
@@ -30,43 +45,43 @@ export function OnboardingPage() {
 
   return (
     <Shell>
-      <div className="fade-up" style={{ maxWidth: 520, margin: "0 auto", padding: "52px 28px" }}>
-        <Companion size={72} />
-        <h1
-          style={{
-            fontFamily: fonts.display,
-            fontSize: 40,
-            letterSpacing: -0.8,
-            margin: "16px 0 8px",
-            color: colors.ink,
-          }}
-        >
-          Welcome to LifeOS
-        </h1>
-        <p style={{ color: colors.muted, marginTop: 0, marginBottom: 20, lineHeight: 1.5, fontSize: 15 }}>
-          A calm companion for an overwhelmed mind — simple on purpose.
-        </p>
-        <div style={{ width: "min(260px, 100%)", marginBottom: 22 }}>
-          <ThemeToggle />
+      <div className="onboard-screen">
+        <div className="onboard-card fade-up">
+          <Companion size={44} />
+          <h1 className="onboard-title">Welcome to LifeOS</h1>
+          <p className="onboard-lede">
+            One conversation keeps your tasks, calendar and reminders in the same place.
+          </p>
+
+          <div className="onboard-steps">
+            {steps.map((s, i) => (
+              <div key={s.title} className="onboard-step" style={{ animationDelay: `${i * 70}ms` }}>
+                <span
+                  className="onboard-step-icon"
+                  style={{ background: s.tint, color: s.tone }}
+                  aria-hidden
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="5" fill="currentColor" />
+                  </svg>
+                </span>
+                <div>
+                  <strong>{s.title}</strong>
+                  <p>{s.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="onboard-theme">
+            <div className="onboard-theme-label">Pick a look — you can change it any time</div>
+            <ThemeToggle />
+          </div>
+
+          <Button onClick={finish} disabled={loading}>
+            {loading ? "Opening…" : "Start using LifeOS"}
+          </Button>
         </div>
-        <div style={{ display: "grid", gap: 10, marginBottom: 24 }}>
-          {steps.map((s, i) => (
-            <div
-              key={s.title}
-              className="fade-up panel"
-              style={{
-                padding: 16,
-                animationDelay: `${i * 80}ms`,
-              }}
-            >
-              <strong style={{ fontFamily: fonts.display, fontSize: 18 }}>{s.title}</strong>
-              <p style={{ margin: "6px 0 0", color: colors.muted, lineHeight: 1.45 }}>{s.body}</p>
-            </div>
-          ))}
-        </div>
-        <Button onClick={finish} disabled={loading}>
-          {loading ? "…" : "Enter LifeOS"}
-        </Button>
       </div>
     </Shell>
   );

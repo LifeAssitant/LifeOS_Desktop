@@ -1,7 +1,7 @@
 import { CSSProperties, FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { clayShadow, colors, fonts, radii } from "./theme";
+import { THEMES, colors } from "./theme";
 import { useThemeMode } from "./themeMode";
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -18,47 +18,47 @@ export function Card({
   className?: string;
 }) {
   return (
-    <div className={`panel ${className || ""}`} style={{ padding: 18, ...style }}>
+    <div className={`surface ${className || ""}`} style={{ padding: 16, ...style }}>
       {children}
     </div>
   );
 }
 
-export function Companion({ size = 48 }: { size?: number }) {
-  const eye = Math.max(5, Math.round(size * 0.12));
+/** The LifeOS mark — a rounded square that carries the active accent. */
+export function Companion({ size = 32 }: { size?: number }) {
+  const dot = Math.max(3, Math.round(size * 0.1));
   return (
     <div
       className="companion-float"
       style={{
         width: size,
         height: size,
-        borderRadius: size / 2,
-        background: `linear-gradient(145deg, ${colors.apricotSoft}, ${colors.mossSoft})`,
-        boxShadow: clayShadow({ lift: 8 }),
+        borderRadius: Math.round(size * 0.32),
+        background: colors.accent,
+        color: colors.accentInk,
         display: "grid",
         placeItems: "center",
+        flexShrink: 0,
+        boxShadow: [
+          `inset 0 ${Math.round(size * 0.07)}px ${Math.round(size * 0.14)}px var(--on-accent-hi)`,
+          `inset 0 -${Math.round(size * 0.1)}px ${Math.round(size * 0.18)}px var(--on-accent-lo)`,
+          `0 ${Math.round(size * 0.18)}px ${Math.round(size * 0.34)}px var(--clay-drop)`,
+        ].join(", "),
       }}
       aria-hidden
     >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: size * 0.04,
-        }}
-      >
-        <div style={{ display: "flex", gap: size * 0.16 }}>
-          <span className="companion-eye" style={{ ...styles.eye, width: eye, height: eye }} />
-          <span className="companion-eye" style={{ ...styles.eye, width: eye, height: eye }} />
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: size * 0.1 }}>
+        <div style={{ display: "flex", gap: size * 0.14 }}>
+          <span style={{ width: dot, height: dot, borderRadius: 999, background: "currentColor" }} />
+          <span style={{ width: dot, height: dot, borderRadius: 999, background: "currentColor" }} />
         </div>
         <span
           style={{
-            width: size * 0.28,
+            width: size * 0.34,
             height: size * 0.14,
-            border: `2px solid ${colors.ink}`,
+            border: `${Math.max(1.5, size * 0.055)}px solid currentColor`,
             borderTop: "none",
-            borderRadius: "0 0 12px 12px",
+            borderRadius: `0 0 ${size}px ${size}px`,
           }}
         />
       </div>
@@ -72,34 +72,33 @@ export function Button({
   variant = "primary",
   type = "button",
   disabled,
+  full,
 }: {
   children: ReactNode;
   onClick?: () => void;
-  variant?: "primary" | "ghost" | "danger" | "moss";
+  variant?: "primary" | "ghost" | "danger";
   type?: "button" | "submit";
   disabled?: boolean;
+  full?: boolean;
 }) {
-  const background =
-    variant === "primary"
-      ? `linear-gradient(160deg, color-mix(in srgb, ${colors.apricot} 75%, white), ${colors.apricot})`
-      : variant === "moss"
-        ? `linear-gradient(160deg, color-mix(in srgb, ${colors.moss} 80%, white), ${colors.moss})`
-        : variant === "danger"
-          ? colors.blush
-          : "var(--panel)";
-  const color = variant === "moss" || variant === "primary" ? "#fff" : colors.ink;
+  const palette: Record<string, CSSProperties> = {
+    primary: { background: colors.accent, color: colors.accentInk },
+    ghost: { color: colors.ink },
+    danger: { background: colors.dangerSoft, color: colors.danger },
+  };
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className="clay-btn soft-btn"
+      className={`ui-btn${variant === "ghost" ? " is-ghost" : ""}`}
       style={{
-        ...styles.button,
-        background,
-        color,
-        opacity: disabled ? 0.55 : 1,
+        padding: "10px 16px",
+        fontSize: 13,
+        width: full ? "100%" : undefined,
+        opacity: disabled ? 0.5 : 1,
+        ...palette[variant],
       }}
     >
       {children}
@@ -108,41 +107,40 @@ export function Button({
 }
 
 export function ThemeToggle() {
-  const { style, scheme, setStyle, setScheme } = useThemeMode();
+  const { theme, setTheme } = useThemeMode();
   return (
-    <div className="theme-controls">
-      <div className="theme-toggle" role="group" aria-label="Surface style">
+    <div className="theme-picker" role="group" aria-label="Theme">
+      {THEMES.map((t) => (
         <button
+          key={t.id}
           type="button"
-          className={style === "clay" ? "is-active" : undefined}
-          onClick={() => setStyle("clay")}
+          className={`theme-option${theme === t.id ? " is-active" : ""}`}
+          aria-pressed={theme === t.id}
+          onClick={() => setTheme(t.id)}
         >
-          Clay
+          <span className="theme-swatch">
+            {t.id === "playful" ? (
+              <>
+                <i style={{ background: "#f4846f" }} />
+                <i style={{ background: "#5ec7ad" }} />
+                <i style={{ background: "#f3c667" }} />
+                <i style={{ background: "#a894ec" }} />
+              </>
+            ) : (
+              <>
+                <i style={{ background: "#0c0e0d" }} />
+                <i style={{ background: "#3a403d" }} />
+                <i style={{ background: "#8b948f" }} />
+                <i style={{ background: "#eef1ef" }} />
+              </>
+            )}
+          </span>
+          <span className="theme-option-text">
+            <strong>{t.label}</strong>
+            <small>{t.hint}</small>
+          </span>
         </button>
-        <button
-          type="button"
-          className={style === "glass" ? "is-active" : undefined}
-          onClick={() => setStyle("glass")}
-        >
-          Glass
-        </button>
-      </div>
-      <div className="theme-toggle" role="group" aria-label="Color scheme">
-        <button
-          type="button"
-          className={scheme === "light" ? "is-active" : undefined}
-          onClick={() => setScheme("light")}
-        >
-          Light
-        </button>
-        <button
-          type="button"
-          className={scheme === "dark" ? "is-active" : undefined}
-          onClick={() => setScheme("dark")}
-        >
-          Dark
-        </button>
-      </div>
+      ))}
     </div>
   );
 }
@@ -151,13 +149,27 @@ export function IconButton({
   label,
   onClick,
   children,
+  active,
 }: {
   label: string;
   onClick?: () => void;
   children: ReactNode;
+  active?: boolean;
 }) {
   return (
-    <button type="button" className="icon-btn" aria-label={label} title={label} onClick={onClick}>
+    <button
+      type="button"
+      className="icon-btn"
+      aria-label={label}
+      title={label}
+      aria-pressed={active}
+      onClick={onClick}
+      style={
+        active
+          ? { background: colors.accent, color: colors.accentInk, borderColor: colors.accent }
+          : undefined
+      }
+    >
       {children}
     </button>
   );
@@ -216,7 +228,7 @@ export function AccountMenu({
         </svg>
       </button>
       {open ? (
-        <div className="account-dropdown panel" role="menu">
+        <div className="account-dropdown" role="menu">
           <div className="account-meta">
             <div className="account-meta-name">{name || "Account"}</div>
             {email ? <div className="account-meta-email">{email}</div> : null}
@@ -234,7 +246,7 @@ export function AccountMenu({
             Settings
           </button>
           <div className="account-theme">
-            <div className="account-theme-label">Appearance</div>
+            <div className="account-theme-label">Theme</div>
             <ThemeToggle />
           </div>
           <button
@@ -255,14 +267,10 @@ export function AccountMenu({
   );
 }
 
-function SettingsIcon() {
+export function SettingsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-      />
+      <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.6" />
       <path
         d="M19.4 15a1.7 1.7 0 0 0 .34 1.86l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.86-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.86.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.86 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.86l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.86.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.86-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.86V9c0 .69.4 1.3 1 1.55H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1.45Z"
         stroke="currentColor"
@@ -276,12 +284,7 @@ function SettingsIcon() {
 function LogoutIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       <path
         d="M16 17l5-5-5-5M21 12H9"
         stroke="currentColor"
@@ -307,11 +310,11 @@ export function Field({
   placeholder?: string;
 }) {
   return (
-    <label style={styles.field}>
-      <span style={styles.label}>{label}</span>
+    <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontSize: 12.5, color: colors.muted, fontWeight: 600 }}>{label}</span>
       <input
-        className="clay-input"
-        style={styles.input}
+        className="field-input"
+        style={{ padding: "11px 13px", fontSize: 14 }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         type={type}
@@ -320,6 +323,12 @@ export function Field({
     </label>
   );
 }
+
+const AUTH_HIGHLIGHTS = [
+  { tone: colors.mint, text: "Say it in plain words — LifeOS books it" },
+  { tone: colors.peach, text: "One view for tasks, events and your day" },
+  { tone: colors.sky, text: "Quiet nudges before anything is due" },
+];
 
 export function AuthForm({
   title,
@@ -336,91 +345,48 @@ export function AuthForm({
 }) {
   return (
     <Shell>
-      <div className="auth-screen fade-up">
-        <div className="auth-card panel panel-warm">
-          <div className="auth-brand">
-            <Companion size={56} />
-            <h1 className="auth-brand-name">LifeOS</h1>
-            <p className="auth-lede">{subtitle}</p>
+      <div className="auth-screen">
+        <aside className="auth-aside">
+          <div className="auth-aside-brand">
+            <Companion size={30} />
+            LifeOS
           </div>
+          <div className="auth-aside-copy fade-up">
+            <h2>Your day, sorted by conversation</h2>
+            <p>
+              Tell LifeOS what is on your mind. It turns the mess into tasks, events and reminders
+              you can actually keep.
+            </p>
+          </div>
+          <div className="auth-aside-list">
+            {AUTH_HIGHLIGHTS.map((h) => (
+              <div key={h.text} className="auth-aside-item">
+                <i style={{ background: h.tone }} />
+                {h.text}
+              </div>
+            ))}
+          </div>
+        </aside>
 
-          <h2 className="auth-title">{title}</h2>
-          <form onSubmit={onSubmit} className="auth-form">
-            {children}
-          </form>
-          <div className="auth-footer">{footer}</div>
-        </div>
-
-        <div className="auth-theme">
-          <ThemeToggle />
+        <div className="auth-panel">
+          <div className="auth-card fade-up">
+            <h1 className="auth-title">{title}</h1>
+            <p className="auth-lede">{subtitle}</p>
+            <form onSubmit={onSubmit} className="auth-form">
+              {children}
+            </form>
+            <div className="auth-footer">{footer}</div>
+            <div className="auth-theme">
+              <div className="account-theme-label">Theme</div>
+              <ThemeToggle />
+            </div>
+          </div>
         </div>
       </div>
     </Shell>
   );
 }
 
-export function PageTitle({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle?: string;
-}) {
-  return (
-    <header style={{ marginBottom: 20 }}>
-      <h1 style={styles.pageTitle}>{title}</h1>
-      {subtitle ? <p style={styles.pageSub}>{subtitle}</p> : null}
-    </header>
-  );
-}
-
 export function EmptyHint({ children }: { children: ReactNode }) {
-  return (
-    <p style={{ color: colors.muted, margin: 0, lineHeight: 1.55, fontSize: 14 }}>
-      {children}
-    </p>
-  );
+  return <p className="empty-hint">{children}</p>;
 }
-
-const styles: Record<string, CSSProperties> = {
-  eye: {
-    borderRadius: 999,
-    background: colors.ink,
-    display: "inline-block",
-    transformOrigin: "center",
-  },
-  button: {
-    borderRadius: radii.pill,
-    padding: "9px 16px",
-    fontWeight: 650,
-    cursor: "pointer",
-    letterSpacing: 0.01,
-    fontSize: 13,
-    border: "none",
-  },
-  field: { display: "flex", flexDirection: "column", gap: 6 },
-  label: {
-    fontSize: 11,
-    color: colors.muted,
-    fontWeight: 650,
-    letterSpacing: 0.05,
-    textTransform: "uppercase",
-  },
-  input: {
-    padding: "11px 13px",
-    fontSize: 14,
-  },
-  pageTitle: {
-    margin: 0,
-    fontFamily: fonts.display,
-    fontSize: 28,
-    fontWeight: 650,
-    letterSpacing: -0.4,
-    color: colors.ink,
-  },
-  pageSub: {
-    margin: "6px 0 0",
-    color: colors.muted,
-    fontSize: 14,
-  },
-};
