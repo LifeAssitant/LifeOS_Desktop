@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { isSupabaseConfigured } from "../supabase";
 import { AuthForm, Button, Field } from "../ui";
-import { colors } from "../theme";
 
 function GoogleButton({
   onClick,
@@ -20,22 +19,7 @@ function GoogleButton({
       type="button"
       onClick={onClick}
       disabled={loading}
-      style={{
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 10,
-        padding: "11px 14px",
-        borderRadius: 12,
-        border: `1px solid ${colors.line}`,
-        background: colors.paper,
-        color: colors.ink,
-        fontWeight: 600,
-        fontSize: 14,
-        cursor: loading ? "wait" : "pointer",
-        opacity: loading ? 0.7 : 1,
-      }}
+      className="clay-btn soft-btn auth-google"
     >
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
         <path
@@ -62,18 +46,10 @@ function GoogleButton({
 
 function AuthDivider() {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "1fr auto 1fr",
-        gap: 10,
-        alignItems: "center",
-        margin: "4px 0 2px",
-      }}
-    >
-      <span style={{ height: 1, background: colors.lineSoft }} />
-      <span style={{ color: colors.muted, fontSize: 12 }}>or</span>
-      <span style={{ height: 1, background: colors.lineSoft }} />
+    <div className="auth-divider">
+      <span />
+      <em>or continue with email</em>
+      <span />
     </div>
   );
 }
@@ -122,20 +98,20 @@ export function LoginPage() {
 
   return (
     <AuthForm
-      title="Sign in"
-      subtitle="A calm companion for your day"
+      title="Welcome back"
+      subtitle="Your calm AI life manager"
       onSubmit={onSubmit}
       footer={
-        <p style={{ color: colors.muted, marginBottom: 0 }}>
+        <p className="auth-switch">
           New here? <Link to="/register">Create account</Link>
         </p>
       }
     >
       <GoogleButton onClick={() => void onGoogle()} loading={googleLoading} label="Continue with Google" />
       <AuthDivider />
-      <Field label="Email" value={email} onChange={setEmail} type="email" />
-      <Field label="Password" value={password} onChange={setPassword} type="password" />
-      {error ? <p style={{ color: colors.danger, margin: 0 }}>{error}</p> : null}
+      <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@company.com" />
+      <Field label="Password" value={password} onChange={setPassword} type="password" placeholder="••••••••" />
+      {error ? <p className="auth-error">{error}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? "Signing in…" : "Sign in"}
       </Button>
@@ -198,26 +174,27 @@ export function RegisterPage() {
 
   return (
     <AuthForm
-      title="Create account"
-      subtitle="Let’s keep life gentle and clear"
+      title="Create your space"
+      subtitle="Plan gently. Stay clear."
       onSubmit={onSubmit}
       footer={
-        <p style={{ color: colors.muted, marginBottom: 0 }}>
+        <p className="auth-switch">
           Already have an account? <Link to="/login">Sign in</Link>
         </p>
       }
     >
       <GoogleButton onClick={() => void onGoogle()} loading={googleLoading} label="Continue with Google" />
       <AuthDivider />
-      <Field label="Name" value={name} onChange={setName} />
-      <Field label="Email" value={email} onChange={setEmail} type="email" />
+      <Field label="Name" value={name} onChange={setName} placeholder="Optional" />
+      <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@company.com" />
       <Field
-        label="Password (min 8 characters)"
+        label="Password"
         value={password}
         onChange={setPassword}
         type="password"
+        placeholder="At least 8 characters"
       />
-      {error ? <p style={{ color: colors.danger, margin: 0 }}>{error}</p> : null}
+      {error ? <p className="auth-error">{error}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? "Creating…" : "Create account"}
       </Button>

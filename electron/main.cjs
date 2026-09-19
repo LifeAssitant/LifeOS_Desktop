@@ -51,7 +51,7 @@ function createWindow() {
     height: 760,
     minWidth: 960,
     minHeight: 640,
-    backgroundColor: "#EFE8DC",
+    backgroundColor: "#EDE8E2",
     title: "LifeOS",
     show: false,
     autoHideMenuBar: true,

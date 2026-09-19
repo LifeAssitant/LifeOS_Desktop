@@ -1,102 +1,88 @@
 import {
   FormEvent,
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 
 import { api, ChatMessage } from "../api";
 import { useAuth } from "../auth";
 import { LifeDataProvider, useLifeData } from "../data";
 import { useDesktopNotifications } from "../notifications";
-import { colors, fonts, radii } from "../theme";
-import { Button, Companion, EmptyHint, Field, Shell } from "../ui";
+import { colors, fonts } from "../theme";
+import { AccountMenu, Button, Companion, EmptyHint, Field, Shell } from "../ui";
+
+type PlanChromeValue = {
+  setPlanChrome: (next: { label: string; onOpen: () => void } | null) => void;
+};
+
+const PlanChromeContext = createContext<PlanChromeValue | null>(null);
+
+function usePlanChrome() {
+  const ctx = useContext(PlanChromeContext);
+  if (!ctx) throw new Error("usePlanChrome requires provider");
+  return ctx;
+}
 
 function Layout() {
   const { user, logout, offlineHint } = useAuth();
   useDesktopNotifications(Boolean(user));
+  const [planChrome, setPlanChromeState] = useState<{
+    label: string;
+    onOpen: () => void;
+  } | null>(null);
+
+  const setPlanChrome = useCallback((next: { label: string; onOpen: () => void } | null) => {
+    setPlanChromeState(next);
+  }, []);
+
+  const chromeValue = useMemo(() => ({ setPlanChrome }), [setPlanChrome]);
 
   return (
-    <Shell>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "196px 1fr",
-          minHeight: "100vh",
-        }}
-      >
-        <aside
-          style={{
-            padding: "18px 12px",
-            borderRight: `1px solid ${colors.lineSoft}`,
-            background: "rgba(251,247,240,0.5)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "0 6px" }}>
-            <Companion size={34} />
-            <div>
-              <div
-                style={{
-                  fontFamily: fonts.display,
-                  fontWeight: 700,
-                  fontSize: 20,
-                  letterSpacing: -0.4,
-                  lineHeight: 1.1,
-                }}
-              >
-                LifeOS
-              </div>
-              <div style={{ color: colors.muted, fontSize: 11 }}>
-                {user?.display_name || user?.email}
-              </div>
+    <PlanChromeContext.Provider value={chromeValue}>
+      <Shell>
+        <div className="app-frame">
+          <header className="app-topbar panel fade-up">
+            <Link to="/" className="app-brand">
+              <Companion size={32} />
+              <span className="app-brand-name">LifeOS</span>
+            </Link>
+
+            <div className="app-topbar-right">
+              {offlineHint ? <span className="app-offline">{offlineHint}</span> : null}
+              {planChrome ? (
+                <button
+                  type="button"
+                  className="plan-open-btn"
+                  onClick={planChrome.onOpen}
+                >
+                  <CalendarIcon />
+                  <span>
+                    <strong>Plan</strong>
+                    <small>{planChrome.label}</small>
+                  </span>
+                </button>
+              ) : null}
+              <AccountMenu
+                name={user?.display_name}
+                email={user?.email}
+                onLogout={logout}
+              />
             </div>
-          </div>
+          </header>
 
-          <nav style={{ display: "grid", gap: 4 }}>
-            {[
-              ["/", "Home"],
-              ["/settings", "Settings"],
-            ].map(([to, label]) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === "/"}
-                className="nav-link"
-                style={({ isActive }) => ({
-                  textDecoration: "none",
-                  color: colors.ink,
-                  fontWeight: isActive ? 650 : 500,
-                  fontSize: 14,
-                  background: isActive ? colors.apricotSoft : "transparent",
-                  padding: "8px 12px",
-                  borderRadius: 10,
-                })}
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <div style={{ flex: 1 }} />
-          {offlineHint ? (
-            <div style={{ color: colors.clay, fontSize: 12, padding: "0 6px" }}>{offlineHint}</div>
-          ) : null}
-          <Button variant="ghost" onClick={logout}>
-            Sign out
-          </Button>
-        </aside>
-        <main style={{ padding: "18px 20px", minWidth: 0 }}>
-          <Outlet />
-        </main>
-      </div>
-    </Shell>
+          <main className="app-main fade-in">
+            <Outlet />
+          </main>
+        </div>
+      </Shell>
+    </PlanChromeContext.Provider>
   );
 }
 
@@ -138,9 +124,11 @@ type DayItem = {
 
 export function HomePage() {
   const { setOfflineHint } = useAuth();
+  const { setPlanChrome } = usePlanChrome();
   const { tasks, events, refreshAll, completeTask, deleteEvent, deleteTask } = useLifeData();
   const [cursor, setCursor] = useState(() => new Date());
   const [selected, setSelected] = useState(() => dayKey(new Date()));
+  const [planOpen, setPlanOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -227,7 +215,9 @@ export function HomePage() {
   }, [loadChat]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = bottomRef.current?.parentElement;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [messages, sending]);
 
   const send = async (e: FormEvent) => {
@@ -270,6 +260,7 @@ export function HomePage() {
           const d = new Date(when);
           setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
           setSelected(dayKey(d));
+          setPlanOpen(true);
         }
       }
     } catch (err) {
@@ -292,294 +283,51 @@ export function HomePage() {
     else await deleteTask(item.id);
   };
 
+  useEffect(() => {
+    if (!planOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPlanOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [planOpen]);
+
+  const planLabel = useMemo(() => {
+    if (selectedItems.length) return `${selectedItems.length} on day`;
+    return selectedLabel.replace(/,.*/, "");
+  }, [selectedItems.length, selectedLabel]);
+
+  const openPlan = useCallback(() => setPlanOpen(true), []);
+
+  useEffect(() => {
+    setPlanChrome({ label: planLabel, onOpen: openPlan });
+    return () => setPlanChrome(null);
+  }, [planLabel, openPlan, setPlanChrome]);
+
   return (
-    <div
-      className="fade-up"
-      style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(300px, 1.05fr) minmax(320px, 0.95fr)",
-        gap: 16,
-        height: "calc(100vh - 36px)",
-        minHeight: 0,
-      }}
-    >
-      <section style={{ display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <h1
-              style={{
-                margin: 0,
-                fontFamily: fonts.display,
-                fontSize: 26,
-                fontWeight: 650,
-                letterSpacing: -0.4,
-              }}
-            >
-              {cursor.toLocaleString(undefined, { month: "long", year: "numeric" })}
-            </h1>
-            <p style={{ margin: "2px 0 0", color: colors.muted, fontSize: 13 }}>
-              Click a day to see what’s planned.
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <Button
-              variant="ghost"
-              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-            >
-              ‹
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                const now = new Date();
-                setCursor(new Date(now.getFullYear(), now.getMonth(), 1));
-                setSelected(dayKey(now));
-              }}
-            >
-              Today
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-            >
-              ›
-            </Button>
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
-            gap: 4,
-            fontSize: 11,
-            color: colors.muted,
-            fontWeight: 650,
-            textTransform: "uppercase",
-            letterSpacing: 0.04,
-            padding: "0 2px",
-          }}
-        >
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-            <div key={d} style={{ textAlign: "center" }}>
-              {d}
-            </div>
-          ))}
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(7, 1fr)",
-            gap: 4,
-            background: colors.paper,
-            border: `1px solid ${colors.lineSoft}`,
-            borderRadius: 14,
-            padding: 8,
-          }}
-        >
-          {monthCells.map((cell) => {
-            if (!cell.inMonth || cell.day == null) {
-              return <div key={cell.key} style={{ minHeight: 54 }} />;
-            }
-            const count = itemsByDay.get(cell.key)?.length || 0;
-            const isSelected = cell.key === selected;
-            const isToday = cell.key === dayKey(new Date());
-            return (
-              <button
-                key={cell.key}
-                type="button"
-                className="soft-btn"
-                onClick={() => setSelected(cell.key)}
-                style={{
-                  minHeight: 54,
-                  borderRadius: 10,
-                  border: isSelected
-                    ? `1.5px solid ${colors.apricot}`
-                    : isToday
-                      ? `1px solid ${colors.moss}`
-                      : "1px solid transparent",
-                  background: isSelected ? colors.apricotSoft : "transparent",
-                  cursor: "pointer",
-                  padding: "6px 4px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 4,
-                  color: colors.ink,
-                }}
-              >
-                <span style={{ fontSize: 13, fontWeight: isToday || isSelected ? 700 : 500 }}>
-                  {cell.day}
-                </span>
-                <span style={{ display: "flex", gap: 3, minHeight: 6 }}>
-                  {count > 0 ? (
-                    <>
-                      <span
-                        style={{
-                          width: 5,
-                          height: 5,
-                          borderRadius: 99,
-                          background: colors.moss,
-                        }}
-                      />
-                      {count > 1 ? (
-                        <span
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: 99,
-                            background: colors.apricot,
-                          }}
-                        />
-                      ) : null}
-                    </>
-                  ) : null}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflow: "auto",
-            background: "rgba(251,247,240,0.7)",
-            border: `1px solid ${colors.lineSoft}`,
-            borderRadius: 14,
-            padding: 12,
-          }}
-        >
-          <div style={{ fontWeight: 650, fontSize: 14, marginBottom: 8 }}>{selectedLabel}</div>
-          {selectedItems.length ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              {selectedItems.map((item) => (
-                <div
-                  key={`${item.kind}-${item.id}`}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    alignItems: "center",
-                    padding: "8px 10px",
-                    borderRadius: 10,
-                    background: item.source === "google" ? "transparent" : colors.paper,
-                    border:
-                      item.source === "google"
-                        ? `1px dashed ${colors.line}`
-                        : `1px solid ${colors.lineSoft}`,
-                  }}
-                >
-                  <div style={{ display: "flex", gap: 8, minWidth: 0 }}>
-                    <span
-                      style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: 99,
-                        marginTop: 5,
-                        background:
-                          item.source === "google"
-                            ? colors.muted
-                            : item.kind === "event"
-                              ? colors.moss
-                              : colors.apricot,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{item.title}</div>
-                      <div style={{ color: colors.muted, fontSize: 12 }}>
-                        {item.source === "google" ? "Google" : item.kind} ·{" "}
-                        {formatTime(item.when) || formatWhen(item.when)}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {item.kind === "task" ? (
-                      <Button variant="ghost" onClick={() => void completeTask(item.id)}>
-                        Done
-                      </Button>
-                    ) : null}
-                    {item.source === "google" ? null : (
-                      <Button variant="ghost" onClick={() => void removeItem(item)}>
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyHint>Nothing on this day yet. Ask LifeOS to add something.</EmptyHint>
-          )}
-        </div>
-      </section>
-
-      <section
-        style={{
-          display: "grid",
-          gridTemplateRows: "auto 1fr auto",
-          minHeight: 0,
-          background: "rgba(251,247,240,0.72)",
-          border: `1px solid ${colors.lineSoft}`,
-          borderRadius: 16,
-          padding: 12,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-          <Companion size={32} />
-          <div>
-            <div style={{ fontFamily: fonts.display, fontSize: 18, fontWeight: 650 }}>Talk with LifeOS</div>
-            <div style={{ color: colors.muted, fontSize: 12 }}>
-              Add, update, or remove anything on your month.
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="chat-scroll"
-          style={{ overflow: "auto", display: "flex", flexDirection: "column", gap: 8, paddingRight: 2 }}
-        >
+    <div className="fade-up home-workspace">
+      <section className="panel panel-warm home-chat">
+        <div className="chat-scroll clay-well chat-stream">
           {!messages.length ? (
-            <div className="fade-in" style={{ margin: "auto", textAlign: "center", maxWidth: 280 }}>
-              <Companion size={48} />
-              <p style={{ fontFamily: fonts.display, fontSize: 18, margin: "10px 0 4px" }}>Say anything</p>
-              <EmptyHint>Events and tasks land on the month calendar — click a day to review.</EmptyHint>
+            <div className="fade-in chat-empty">
+              <Companion size={52} />
+              <p className="chat-empty-title">Say anything</p>
+              <EmptyHint>
+                Ask LifeOS to schedule something — open Plan anytime to review your month.
+              </EmptyHint>
             </div>
           ) : null}
           {messages.map((m) => (
             <div
               key={m.id}
-              className="fade-in"
-              style={{
-                alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                maxWidth: "88%",
-                background: m.role === "user" ? colors.apricotSoft : colors.paper,
-                border: `1px solid ${colors.lineSoft}`,
-                borderRadius: m.role === "user" ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-                padding: "9px 11px",
-                lineHeight: 1.4,
-                fontSize: 13.5,
-              }}
+              className={`chat-bubble ${m.role === "user" ? "is-user" : "is-assistant"}`}
             >
               <div>{m.content}</div>
               {m.actions?.map((a, idx) =>
                 a.undone ? null : (
                   <button
                     key={`${m.id}-${idx}`}
-                    className="soft-btn"
-                    style={{
-                      marginTop: 8,
-                      border: "none",
-                      background: colors.mossSoft,
-                      borderRadius: radii.pill,
-                      padding: "5px 10px",
-                      cursor: "pointer",
-                      fontWeight: 650,
-                      fontSize: 12,
-                    }}
+                    className="chat-undo"
                     onClick={() => void undo(m.id, idx)}
                   >
                     {a.summary} · Undo
@@ -588,34 +336,181 @@ export function HomePage() {
               )}
             </div>
           ))}
-          {sending ? (
-            <div style={{ color: colors.muted, fontSize: 12, paddingLeft: 2 }}>LifeOS is thinking…</div>
-          ) : null}
+          {sending ? <div className="fade-in chat-thinking">LifeOS is thinking…</div> : null}
           <div ref={bottomRef} />
         </div>
 
-        <form onSubmit={send} style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <form onSubmit={send} className="chat-composer">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Talk to LifeOS…"
-            style={{
-              flex: 1,
-              borderRadius: radii.pill,
-              border: `1px solid ${colors.line}`,
-              padding: "10px 14px",
-              background: colors.paper,
-              outline: "none",
-              fontSize: 13.5,
-            }}
+            className="clay-input chat-input"
           />
           <Button type="submit" disabled={sending}>
             Send
           </Button>
         </form>
-        {error ? <p style={{ color: colors.danger, margin: "6px 0 0", fontSize: 12 }}>{error}</p> : null}
+        {error ? <p className="chat-error">{error}</p> : null}
       </section>
+
+      {planOpen ? (
+        <>
+          <button
+            type="button"
+            className="plan-backdrop"
+            aria-label="Close plan"
+            onClick={() => setPlanOpen(false)}
+          />
+          <aside className="panel panel-cool plan-drawer" role="dialog" aria-label="Your plan">
+            <div className="home-section-head">
+              <div>
+                <h1 className="home-title plan-title">
+                  {cursor.toLocaleString(undefined, { month: "long", year: "numeric" })}
+                </h1>
+                <p className="home-sub">Your calendar and day list.</p>
+              </div>
+              <div className="home-month-nav">
+                <Button
+                  variant="ghost"
+                  onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+                >
+                  ‹
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    const now = new Date();
+                    setCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+                    setSelected(dayKey(now));
+                  }}
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+                >
+                  ›
+                </Button>
+                <button
+                  type="button"
+                  className="plan-close"
+                  aria-label="Close plan"
+                  onClick={() => setPlanOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="cal-weekdays">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                <div key={d}>{d}</div>
+              ))}
+            </div>
+
+            <div className="clay-well cal-grid">
+              {monthCells.map((cell) => {
+                if (!cell.inMonth || cell.day == null) {
+                  return <div key={cell.key} className="day-cell-spacer" />;
+                }
+                const count = itemsByDay.get(cell.key)?.length || 0;
+                const isSelected = cell.key === selected;
+                const isToday = cell.key === dayKey(new Date());
+                return (
+                  <button
+                    key={cell.key}
+                    type="button"
+                    className={`soft-btn day-cell${isSelected ? " is-selected" : ""}${isToday ? " is-today" : ""}`}
+                    onClick={() => setSelected(cell.key)}
+                  >
+                    <span className="day-num">{cell.day}</span>
+                    <span className="day-dots">
+                      {count > 0 ? (
+                        <>
+                          <span
+                            className={isSelected || isToday ? "dot-pulse" : undefined}
+                            style={{ background: colors.moss }}
+                          />
+                          {count > 1 ? <span style={{ background: colors.apricot }} /> : null}
+                        </>
+                      ) : null}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="home-day-block">
+              <div className="home-day-label">{selectedLabel}</div>
+              {selectedItems.length ? (
+                <div className="day-list">
+                  {selectedItems.map((item, index) => (
+                    <div
+                      key={`${item.kind}-${item.id}`}
+                      className="stagger-item day-row"
+                      style={{ animationDelay: `${index * 40}ms` }}
+                    >
+                      <span
+                        className="day-row-dot"
+                        style={{
+                          background:
+                            item.source === "google"
+                              ? colors.muted
+                              : item.kind === "event"
+                                ? colors.moss
+                                : colors.apricot,
+                        }}
+                      />
+                      <div className="day-row-body">
+                        <div className="day-row-title">{item.title}</div>
+                        <div className="day-row-meta">
+                          {item.source === "google" ? "Google" : item.kind} ·{" "}
+                          {formatTime(item.when) || formatWhen(item.when)}
+                        </div>
+                      </div>
+                      <div className="day-row-actions">
+                        {item.kind === "task" ? (
+                          <button
+                            type="button"
+                            className="text-action"
+                            onClick={() => void completeTask(item.id)}
+                          >
+                            Done
+                          </button>
+                        ) : null}
+                        {item.source === "google" ? null : (
+                          <button
+                            type="button"
+                            className="text-action muted"
+                            onClick={() => void removeItem(item)}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyHint>Nothing on this day yet. Ask LifeOS to add something.</EmptyHint>
+              )}
+            </div>
+          </aside>
+        </>
+      ) : null}
     </div>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 10h18" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -724,45 +619,29 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="fade-up" style={{ maxWidth: 460 }}>
-      <h1
-        style={{
-          margin: "0 0 4px",
-          fontFamily: fonts.display,
-          fontSize: 26,
-          fontWeight: 650,
-        }}
-      >
-        Settings
-      </h1>
-      <p style={{ margin: "0 0 16px", color: colors.muted, fontSize: 13 }}>Keep LifeOS feeling like yours.</p>
+    <div className="fade-up settings-page panel">
+      <div className="settings-back">
+        <Link to="/" className="text-action">
+          ← Home
+        </Link>
+      </div>
+      <h1 className="home-title">Settings</h1>
+      <p className="home-sub" style={{ marginBottom: 28 }}>
+        Calendar, reminders, and AI.
+      </p>
 
-      <div
-        style={{
-          background: colors.paper,
-          borderRadius: 12,
-          padding: 12,
-          border: `1px solid ${colors.lineSoft}`,
-          marginBottom: 14,
-          fontSize: 13,
-        }}
-      >
+      <div className="clay-well settings-block">
         <div style={{ fontWeight: 700 }}>{user?.email}</div>
-        <div style={{ color: colors.muted, marginTop: 3 }}>Credits: {user?.credit_balance}</div>
-        <div style={{ color: colors.muted }}>BYOK: {user?.has_byok_key ? "saved" : "not set"}</div>
+        <div style={{ color: colors.muted, marginTop: 6, fontSize: 13 }}>
+          Credits: {user?.credit_balance}
+          {" · "}
+          BYOK: {user?.has_byok_key ? "saved" : "not set"}
+        </div>
       </div>
 
-      <div
-        style={{
-          background: colors.paper,
-          borderRadius: 12,
-          padding: 12,
-          border: `1px solid ${colors.lineSoft}`,
-          marginBottom: 14,
-        }}
-      >
-        <div style={{ fontWeight: 650, fontSize: 14, marginBottom: 4 }}>Google Calendar</div>
-        <p style={{ margin: "0 0 10px", color: colors.muted, fontSize: 12 }}>
+      <div className="settings-block panel panel-soft">
+        <div className="settings-block-title">Google Calendar</div>
+        <p className="home-sub" style={{ marginBottom: 14 }}>
           {calendarConnected
             ? "Your Google events appear quietly on the month view."
             : "Connect once — LifeOS reads your primary calendar (no edits)."}
@@ -785,33 +664,38 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <Button variant={mode === "hosted" ? "primary" : "ghost"} onClick={() => setMode("hosted")}>
-          LifeOS API
-        </Button>
-        <Button variant={mode === "byok" ? "primary" : "ghost"} onClick={() => setMode("byok")}>
-          My Gemini key
-        </Button>
+      <div className="settings-block">
+        <div className="settings-block-title">AI</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <Button variant={mode === "hosted" ? "primary" : "ghost"} onClick={() => setMode("hosted")}>
+            LifeOS API
+          </Button>
+          <Button variant={mode === "byok" ? "primary" : "ghost"} onClick={() => setMode("byok")}>
+            My Gemini key
+          </Button>
+        </div>
+
+        {mode === "byok" ? (
+          <Field label="Gemini API key" value={key} onChange={setKey} type="password" placeholder="AIza…" />
+        ) : null}
       </div>
 
-      {mode === "byok" ? (
+      <div className="settings-block">
         <Field
-          label="Gemini API key"
-          value={key}
-          onChange={setKey}
-          placeholder={user?.has_byok_key ? "•••• keep existing" : "AIza…"}
+          label="Remind me before (minutes)"
+          value={remindBefore}
+          onChange={setRemindBefore}
+          type="number"
         />
-      ) : (
-        <Button variant="ghost" onClick={buy}>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap" }}>
+        <Button onClick={save}>Save</Button>
+        <Button variant="ghost" onClick={() => void buy()}>
           Buy credits
         </Button>
-      )}
-
-      <div style={{ height: 12 }} />
-      <Field label="Remind minutes before" value={remindBefore} onChange={setRemindBefore} />
-      <div style={{ height: 12 }} />
-      <Button onClick={save}>Save</Button>
-      {msg ? <p style={{ color: colors.muted, fontSize: 13 }}>{msg}</p> : null}
+      </div>
+      {msg ? <p style={{ color: colors.muted, fontSize: 13, marginTop: 12 }}>{msg}</p> : null}
     </div>
   );
 }
