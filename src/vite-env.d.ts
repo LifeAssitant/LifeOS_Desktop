@@ -14,6 +14,10 @@ interface LifeosDesktopBridge {
   notify: (title: string, body: string) => Promise<boolean>;
   getDesktopToken: () => Promise<string>;
   openExternal: (url: string) => Promise<boolean>;
+  /** Shrink to the always-on-top corner widget. */
+  enterMini: () => Promise<boolean>;
+  /** Back to the app window; pass true to open it maximized. */
+  exitMini: (maximize?: boolean) => Promise<boolean>;
   onAuthUrl: (handler: (url: string) => void) => () => void;
 }
 

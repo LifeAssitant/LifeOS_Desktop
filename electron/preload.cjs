@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld("lifeosDesktop", {
   notify: (title, body) => ipcRenderer.invoke("notify", { title, body }),
   getDesktopToken: () => ipcRenderer.invoke("register-desktop-token"),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
+  enterMini: () => ipcRenderer.invoke("enter-mini"),
+  exitMini: (maximize) => ipcRenderer.invoke("exit-mini", { maximize: Boolean(maximize) }),
   onAuthUrl: (handler) => {
     const listener = (_event, url) => handler(url);
     ipcRenderer.on("lifeos-auth-url", listener);

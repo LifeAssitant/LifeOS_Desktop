@@ -87,6 +87,17 @@ function Layout() {
 
             <div className="app-topbar-right">
               {offlineHint ? <span className="app-offline">{offlineHint}</span> : null}
+              {typeof window.lifeosDesktop?.enterMini === "function" ? (
+                <button
+                  type="button"
+                  className="pill-btn"
+                  title="Shrink to a corner widget"
+                  onClick={() => void window.lifeosDesktop?.enterMini()}
+                >
+                  <MiniIcon />
+                  Mini
+                </button>
+              ) : null}
               {planChrome ? (
                 <button
                   type="button"
@@ -574,6 +585,15 @@ export function HomePage() {
         </aside>
       ) : null}
     </div>
+  );
+}
+
+function MiniIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="4" width="18" height="16" rx="3.5" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="12" y="13" width="7" height="5" rx="1.6" fill="currentColor" />
+    </svg>
   );
 }
 
