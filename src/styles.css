@@ -609,6 +609,93 @@ html[data-theme="playful"] .suggestion-tone-lilac {
   border-radius: var(--r-lg) var(--r-lg) 8px var(--r-lg);
 }
 
+/* Rendered assistant markdown */
+.md > *:first-child {
+  margin-top: 0;
+}
+
+.md > *:last-child {
+  margin-bottom: 0;
+}
+
+.md-plain {
+  white-space: pre-wrap;
+}
+
+.md-p {
+  margin: 0 0 9px;
+}
+
+.md-heading {
+  margin: 14px 0 7px;
+  font-family: var(--font-display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  font-size: 15px;
+}
+
+.md-list {
+  margin: 0 0 9px;
+  padding-left: 4px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.md-list li {
+  position: relative;
+  padding-left: 18px;
+}
+
+.md-list li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.75;
+}
+
+ol.md-list {
+  counter-reset: md-item;
+}
+
+ol.md-list li {
+  counter-increment: md-item;
+  padding-left: 22px;
+}
+
+ol.md-list li::before {
+  content: counter(md-item);
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  background: none;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  opacity: 1;
+}
+
+.md strong {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.md code {
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--input-fill);
+  box-shadow: inset 0 1px 3px var(--clay-press-lo);
+}
+
 .chat-actions {
   display: flex;
   flex-wrap: wrap;

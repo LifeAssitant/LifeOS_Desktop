@@ -14,6 +14,7 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api, ChatMessage } from "../api";
 import { useAuth } from "../auth";
 import { LifeDataProvider, useLifeData } from "../data";
+import { Markdown } from "../markdown";
 import { useDesktopNotifications } from "../notifications";
 import { colors } from "../theme";
 import { AccountMenu, Button, Companion, EmptyHint, Field, Shell } from "../ui";
@@ -388,7 +389,11 @@ export function HomePage() {
               key={m.id}
               className={`chat-bubble ${m.role === "user" ? "is-user" : "is-assistant"}`}
             >
-              <div>{m.content}</div>
+              {m.role === "user" ? (
+                <div className="md-plain">{m.content}</div>
+              ) : (
+                <Markdown text={m.content} />
+              )}
               {m.actions?.some((a) => !a.undone) ? (
                 <div className="chat-actions">
                   {m.actions.map((a, idx) =>
