@@ -19,8 +19,22 @@ let miniWindow = null;
 let tray = null;
 let pollTimer = null;
 let snapTimer = null;
+let pendingAuthUrl = null;
 
 const PROTOCOL = "lifeos";
+const DEBUG_LOG_PATH = path.join(app.getPath("userData"), "lifeos-auth-debug.log");
+
+function appendDebugLog(...args) {
+  const line = `${new Date().toISOString()} ${args
+    .map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg)))
+    .join(" ")}`;
+  try {
+    fs.appendFileSync(DEBUG_LOG_PATH, `${line}\n`, "utf8");
+  } catch {
+    // no-op: debug logging should never break the app
+  }
+  console.log(line);
+}
 
 /* ---------- Mini widget ---------- */
 
@@ -147,16 +161,29 @@ function exitMiniMode({ maximize } = {}) {
   mainWindow.focus();
 }
 
+function queueAuthUrl(url) {
+  pendingAuthUrl = url;
+  appendDebugLog("queueAuthUrl", { hasUrl: Boolean(url), hasMainWindow: Boolean(mainWindow), destroyed: Boolean(mainWindow && mainWindow.isDestroyed?.()) });
+}
+
 function sendAuthUrl(url) {
-  if (!mainWindow) return;
-  mainWindow.webContents.send("lifeos-auth-url", url);
+  queueAuthUrl(url);
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  try {
+    mainWindow.webContents.send("lifeos-auth-url", url);
+    appendDebugLog("sendAuthUrl", { hasUrl: Boolean(url), hasMainWindow: true, destroyed: false });
+  } catch (err) {
+    appendDebugLog("sendAuthUrl failed, queued for retry", { error: String(err) });
+  }
   if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
 }
 
 function extractProtocolUrl(argv) {
-  return (argv || []).find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}://`));
+  const url = (argv || []).find((arg) => typeof arg === "string" && arg.startsWith(`${PROTOCOL}://`));
+  appendDebugLog("extractProtocolUrl", { hasUrl: Boolean(url) });
+  return url;
 }
 
 if (process.defaultApp) {
@@ -208,6 +235,11 @@ function createWindow() {
     mainWindow.show();
     const bootUrl = extractProtocolUrl(process.argv);
     if (bootUrl) sendAuthUrl(bootUrl);
+    else if (pendingAuthUrl) {
+      const queued = pendingAuthUrl;
+      pendingAuthUrl = null;
+      sendAuthUrl(queued);
+    }
   });
 
   if (isDev) {
@@ -297,6 +329,13 @@ ipcMain.handle("open-external", async (_event, url) => {
   return false;
 });
 
+ipcMain.handle("get-auth-url", () => {
+  const url = pendingAuthUrl;
+  pendingAuthUrl = null;
+  appendDebugLog("ipc.get-auth-url", { hasUrl: Boolean(url) });
+  return url || null;
+});
+
 app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
     callback(
@@ -320,7 +359,11 @@ app.whenReady().then(() => {
 
 app.on("open-url", (event, url) => {
   event.preventDefault();
-  if (url && url.startsWith(`${PROTOCOL}://`)) sendAuthUrl(url);
+  appendDebugLog("app.open-url", { hasUrl: Boolean(url) });
+  if (url && url.startsWith(`${PROTOCOL}://`)) {
+    queueAuthUrl(url);
+    if (mainWindow && !mainWindow.isDestroyed()) sendAuthUrl(url);
+  }
 });
 
 app.on("before-quit", () => {

@@ -39,14 +39,17 @@ export function parseAuthDeepLink(url: string): URLSearchParams {
       if (!params.has(key)) params.set(key, value);
     });
   }
+  console.log("parseAuthDeepLink parameter names", Array.from(params.keys()));
   return params;
 }
 
 export async function sessionFromDeepLink(url: string): Promise<Session | null> {
+  console.log("sessionFromDeepLink started");
   const supabase = getSupabase();
   const params = parseAuthDeepLink(url);
   const code = params.get("code");
   if (code) {
+    console.log("Detected OAuth code in URL");
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) throw error;
     return data.session;
@@ -54,6 +57,7 @@ export async function sessionFromDeepLink(url: string): Promise<Session | null> 
   const access_token = params.get("access_token");
   const refresh_token = params.get("refresh_token");
   if (access_token && refresh_token) {
+    console.log("Detected direct session tokens in URL");
     const { data, error } = await supabase.auth.setSession({
       access_token,
       refresh_token,
@@ -61,6 +65,7 @@ export async function sessionFromDeepLink(url: string): Promise<Session | null> 
     if (error) throw error;
     return data.session;
   }
+  console.log("No code or token detected in redirect URL");
   return null;
 }
 

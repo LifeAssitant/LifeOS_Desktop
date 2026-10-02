@@ -58,25 +58,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshUser]);
 
   useEffect(() => {
-    if (!window.lifeosDesktop?.onAuthUrl) return;
-    const unsubscribe = window.lifeosDesktop.onAuthUrl(async (url) => {
+    const processAuthUrl = async (url: string) => {
+      console.log("Received auth callback URL");
       try {
         if (url.includes("calendar-connected")) {
+          console.log("Calendar connected callback received");
           window.dispatchEvent(new CustomEvent("lifeos-calendar-connected"));
           return;
         }
         const session = await sessionFromDeepLink(url);
+        console.log("Parsed deep-link session", session ? { hasAccessToken: Boolean(session.access_token), hasRefreshToken: Boolean(session.refresh_token) } : null);
         if (session?.access_token) {
           await finishGoogleSession(session.access_token);
         }
       } catch (err) {
-        console.error(err);
+        console.error("Auth callback error", err);
         setOfflineHint(
           err instanceof Error ? err.message : "Google sign-in failed"
         );
       }
+    };
+
+    const handleWindowAuthEvent = (event: Event) => {
+      const detail = (event as CustomEvent<string>).detail;
+      if (typeof detail === "string" && detail.startsWith("lifeos://")) {
+        void processAuthUrl(detail);
+      }
+    };
+
+    window.addEventListener("lifeos-auth-url", handleWindowAuthEvent);
+
+    if (!window.lifeosDesktop?.onAuthUrl || !window.lifeosDesktop?.getAuthUrl) {
+      return () => {
+        window.removeEventListener("lifeos-auth-url", handleWindowAuthEvent);
+      };
+    }
+
+    const drainQueuedAuth = async () => {
+      const url = await window.lifeosDesktop!.getAuthUrl();
+      if (url) {
+        await processAuthUrl(url);
+      }
+    };
+
+    const unsubscribe = window.lifeosDesktop.onAuthUrl(async (url) => {
+      await processAuthUrl(url);
     });
-    return unsubscribe;
+
+    void drainQueuedAuth();
+    const timer = window.setInterval(() => {
+      void drainQueuedAuth();
+    }, 1000);
+
+    return () => {
+      unsubscribe();
+      window.clearInterval(timer);
+      window.removeEventListener("lifeos-auth-url", handleWindowAuthEvent);
+    };
   }, [finishGoogleSession]);
 
   const login = useCallback(

@@ -55,7 +55,7 @@ function AuthDivider() {
 }
 
 export function LoginPage() {
-  const { user, login, loginWithGoogle } = useAuth();
+  const { user, login, loginWithGoogle, offlineHint } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -92,6 +92,7 @@ export function LoginPage() {
       await loginWithGoogle();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google sign-in failed");
+    } finally {
       setGoogleLoading(false);
     }
   };
@@ -111,7 +112,7 @@ export function LoginPage() {
       <AuthDivider />
       <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@company.com" />
       <Field label="Password" value={password} onChange={setPassword} type="password" placeholder="••••••••" />
-      {error ? <p className="auth-error">{error}</p> : null}
+      {error || offlineHint ? <p className="auth-error">{error || offlineHint}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? "Signing in…" : "Sign in"}
       </Button>
@@ -120,7 +121,7 @@ export function LoginPage() {
 }
 
 export function RegisterPage() {
-  const { user, register, loginWithGoogle } = useAuth();
+  const { user, register, loginWithGoogle, offlineHint } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -168,6 +169,7 @@ export function RegisterPage() {
       await loginWithGoogle();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Google sign-up failed");
+    } finally {
       setGoogleLoading(false);
     }
   };
@@ -194,7 +196,7 @@ export function RegisterPage() {
         type="password"
         placeholder="At least 8 characters"
       />
-      {error ? <p className="auth-error">{error}</p> : null}
+      {error || offlineHint ? <p className="auth-error">{error || offlineHint}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? "Creating…" : "Create account"}
       </Button>

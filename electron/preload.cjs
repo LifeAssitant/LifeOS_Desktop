@@ -11,4 +11,9 @@ contextBridge.exposeInMainWorld("lifeosDesktop", {
     ipcRenderer.on("lifeos-auth-url", listener);
     return () => ipcRenderer.removeListener("lifeos-auth-url", listener);
   },
+  getAuthUrl: () => ipcRenderer.invoke("get-auth-url"),
+});
+
+ipcRenderer.on("lifeos-auth-url", (_event, url) => {
+  window.dispatchEvent(new CustomEvent("lifeos-auth-url", { detail: url }));
 });

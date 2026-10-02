@@ -19,6 +19,7 @@ interface LifeosDesktopBridge {
   /** Back to the app window; pass true to open it maximized. */
   exitMini: (maximize?: boolean) => Promise<boolean>;
   onAuthUrl: (handler: (url: string) => void) => () => void;
+  getAuthUrl: () => Promise<string | null>;
 }
 
 interface Window {
