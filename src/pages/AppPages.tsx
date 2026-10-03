@@ -75,8 +75,25 @@ function Layout() {
   );
 
   const onSettings = location.pathname.startsWith("/settings");
+  const onBilling = location.pathname.startsWith("/billing");
   const firstName = (user?.display_name || user?.email || "").split(/[\s@]/)[0];
   const today = new Date();
+  const pageTitle = onBilling
+    ? "Billing"
+    : onSettings
+      ? "Settings"
+      : firstName
+        ? `${greeting(today)}, ${firstName}`
+        : greeting(today);
+  const pageSubtitle = onBilling
+    ? "Free, Plus, and Pro"
+    : onSettings
+      ? "Calendar, reminders and AI"
+      : today.toLocaleDateString(undefined, {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        });
 
   return (
     <PlanChromeContext.Provider value={chromeValue}>
@@ -88,22 +105,8 @@ function Layout() {
                 <Companion size={38} />
               </Link>
               <div className="topbar-greeting">
-                <h1>
-                  {onSettings
-                    ? "Settings"
-                    : firstName
-                      ? `${greeting(today)}, ${firstName}`
-                      : greeting(today)}
-                </h1>
-                <p>
-                  {onSettings
-                    ? "Calendar, reminders and AI"
-                    : today.toLocaleDateString(undefined, {
-                        weekday: "long",
-                        month: "long",
-                        day: "numeric",
-                      })}
-                </p>
+                <h1>{pageTitle}</h1>
+                <p>{pageSubtitle}</p>
               </div>
             </div>
 

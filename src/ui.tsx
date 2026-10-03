@@ -239,6 +239,18 @@ export function AccountMenu({
             role="menuitem"
             onClick={() => {
               setOpen(false);
+              navigate("/billing");
+            }}
+          >
+            <BillingIcon />
+            Plans & billing
+          </button>
+          <button
+            type="button"
+            className="account-item"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
               navigate("/settings");
             }}
           >
@@ -277,6 +289,16 @@ export function SettingsIcon() {
         strokeWidth="1.4"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function BillingIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="6" width="18" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3 10h18" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M7 14h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
