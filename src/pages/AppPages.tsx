@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { api, ChatMessage } from "../api";
 import { useAuth } from "../auth";
@@ -19,6 +19,8 @@ import { useDesktopNotifications } from "../notifications";
 import { colors } from "../theme";
 import { Tour, requestTour } from "../tour";
 import { AccountMenu, Button, Companion, EmptyHint, Field, Shell } from "../ui";
+import { GardenScene } from "../garden";
+import { gardenEntered } from "../gardenGate";
 import {
   getSpeakReplies,
   isSpeaking,
@@ -30,10 +32,11 @@ import {
   type VoiceStatus,
 } from "../voice";
 
-type PlanChrome = { count: number; open: boolean; onToggle: () => void };
+type DockChrome = { count: number; open: boolean; onToggle: () => void };
 
 type PlanChromeValue = {
-  setPlanChrome: (next: PlanChrome | null) => void;
+  setPlanChrome: (next: DockChrome | null) => void;
+  setGardenChrome: (next: DockChrome | null) => void;
 };
 
 const PlanChromeContext = createContext<PlanChromeValue | null>(null);
@@ -55,13 +58,21 @@ function Layout() {
   const { user, logout, offlineHint } = useAuth();
   const location = useLocation();
   useDesktopNotifications(Boolean(user));
-  const [planChrome, setPlanChromeState] = useState<PlanChrome | null>(null);
+  const [planChrome, setPlanChromeState] = useState<DockChrome | null>(null);
+  const [gardenChrome, setGardenChromeState] = useState<DockChrome | null>(null);
 
-  const setPlanChrome = useCallback((next: PlanChrome | null) => {
+  const setPlanChrome = useCallback((next: DockChrome | null) => {
     setPlanChromeState(next);
   }, []);
 
-  const chromeValue = useMemo(() => ({ setPlanChrome }), [setPlanChrome]);
+  const setGardenChrome = useCallback((next: DockChrome | null) => {
+    setGardenChromeState(next);
+  }, []);
+
+  const chromeValue = useMemo(
+    () => ({ setPlanChrome, setGardenChrome }),
+    [setPlanChrome, setGardenChrome]
+  );
 
   const onSettings = location.pathname.startsWith("/settings");
   const firstName = (user?.display_name || user?.email || "").split(/[\s@]/)[0];
@@ -108,6 +119,20 @@ function Layout() {
                 >
                   <MiniIcon />
                   Mini
+                </button>
+              ) : null}
+              {gardenChrome ? (
+                <button
+                  type="button"
+                  className={`pill-btn${gardenChrome.open ? " is-active" : ""}`}
+                  onClick={gardenChrome.onToggle}
+                >
+                  <SproutIcon />
+                  {gardenChrome.open
+                    ? "Hide garden"
+                    : gardenChrome.count
+                      ? `Garden · ${gardenChrome.count}`
+                      : "Garden"}
                 </button>
               ) : null}
               {planChrome ? (
@@ -213,11 +238,20 @@ const SUGGESTIONS: Array<{
 
 export function HomePage() {
   const { setOfflineHint } = useAuth();
-  const { setPlanChrome } = usePlanChrome();
-  const { tasks, events, refreshAll, completeTask, deleteEvent, deleteTask } = useLifeData();
+  const { setPlanChrome, setGardenChrome } = usePlanChrome();
+  const { tasks, events, doneCount, refreshAll, completeTask, deleteEvent, deleteTask } =
+    useLifeData();
   const [cursor, setCursor] = useState(() => new Date());
   const [selected, setSelected] = useState(() => dayKey(new Date()));
   const [planOpen, setPlanOpen] = useState(true);
+  const [gardenOpen, setGardenOpen] = useState(() => {
+    try {
+      return localStorage.getItem("lifeos_garden_open") !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -456,14 +490,32 @@ export function HomePage() {
   };
 
   const togglePlan = useCallback(() => setPlanOpen((v) => !v), []);
+  const toggleGarden = useCallback(() => {
+    setGardenOpen((open) => {
+      const next = !open;
+      try {
+        localStorage.setItem("lifeos_garden_open", next ? "1" : "0");
+      } catch {
+        /* storage unavailable */
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     setPlanChrome({ count: selectedItems.length, open: planOpen, onToggle: togglePlan });
     return () => setPlanChrome(null);
   }, [selectedItems.length, planOpen, togglePlan, setPlanChrome]);
 
+  useEffect(() => {
+    setGardenChrome({ count: doneCount, open: gardenOpen, onToggle: toggleGarden });
+    return () => setGardenChrome(null);
+  }, [doneCount, gardenOpen, toggleGarden, setGardenChrome]);
+
+  const sideOpen = planOpen || gardenOpen;
+
   return (
-    <div className={`workspace${planOpen ? " has-plan" : ""}`}>
+    <div className={`workspace${sideOpen ? " has-plan" : ""}`}>
       <section className="chat-panel">
         <div className="chat-stream">
           {!messages.length ? (
@@ -595,8 +647,20 @@ export function HomePage() {
         </div>
       </section>
 
-      {planOpen ? (
-        <aside className="plan-dock" aria-label="Your plan">
+      {sideOpen ? (
+        <aside
+          className={`plan-dock${gardenOpen && !planOpen ? " is-garden-only" : ""}`}
+          aria-label={planOpen ? "Your plan" : "Garden"}
+        >
+          {gardenOpen ? (
+            <GardenScene
+              done={doneCount}
+              roomy={!planOpen}
+              onOpenStore={() => navigate("/garden/store")}
+            />
+          ) : null}
+          {planOpen ? (
+            <>
           <div className="plan-head">
             <h2 className="plan-month">
               {cursor.toLocaleString(undefined, { month: "long", year: "numeric" })}
@@ -723,9 +787,36 @@ export function HomePage() {
               <EmptyHint>Nothing here yet. Ask LifeOS to add something to this day.</EmptyHint>
             )}
           </div>
+            </>
+          ) : null}
         </aside>
       ) : null}
     </div>
+  );
+}
+
+function SproutIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 21V11"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 13c0-4 2.2-6.2 6-7-1 4.2-3.2 6-6 7Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 15c0-3-1.8-5-4.8-5.8 1 3.2 2.6 4.6 4.8 5.8Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -1086,6 +1177,10 @@ export function SettingsPage() {
 }
 
 export function AppLayout() {
+  const location = useLocation();
+  if ((location.pathname === "/" || location.pathname === "") && !gardenEntered()) {
+    return <Navigate to="/garden" replace />;
+  }
   return (
     <LifeDataProvider>
       <Layout />

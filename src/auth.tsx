@@ -8,6 +8,7 @@ import React, {
 } from "react";
 
 import { api, clearTokens, getAccessToken, saveTokens, User } from "./api";
+import { clearGardenEntered } from "./gardenGate";
 import { sessionFromDeepLink, startGoogleOAuth } from "./supabase";
 
 type AuthState = {
@@ -140,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    clearGardenEntered();
     clearTokens();
     setUser(null);
   }, []);

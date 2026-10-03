@@ -173,6 +173,15 @@ export type ChatMessage = {
   created_at: string;
 };
 
+export type GardenStoreItem = {
+  sku: string;
+  name: string;
+  description: string;
+  category: string;
+  credit_cost: number;
+  owned: boolean;
+};
+
 export type NotificationItem = {
   id: string;
   kind: string;
@@ -253,6 +262,20 @@ export const api = {
     }),
   checkout: () =>
     apiFetch<{ checkout_url: string }>("/billing/checkout", { method: "POST" }),
+  gardenCatalog: () =>
+    apiFetch<{
+      credit_balance: number;
+      items: GardenStoreItem[];
+      tasks_completed_lifetime: number;
+      task_credit_interval: number;
+      tasks_until_next_credit: number;
+    }>("/garden/catalog"),
+  gardenInventory: () => apiFetch<GardenStoreItem[]>("/garden/inventory"),
+  gardenPurchase: (sku: string) =>
+    apiFetch<{ credit_balance: number; owned_skus: string[]; item: GardenStoreItem }>(
+      "/garden/purchase",
+      { method: "POST", body: JSON.stringify({ sku }) }
+    ),
   pendingDesktop: () =>
     apiFetch<NotificationItem[]>("/notifications/pending/desktop"),
   googleCalendarStatus: () =>

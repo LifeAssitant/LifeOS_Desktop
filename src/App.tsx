@@ -3,6 +3,8 @@ import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth";
 import { LoginPage, RegisterPage } from "./pages/AuthPages";
 import { AppLayout, HomePage, RequireAuth, SettingsPage } from "./pages/AppPages";
+import { GardenLanding } from "./pages/GardenLanding";
+import { GardenStorePage } from "./pages/GardenStorePage";
 import { AttunePage } from "./pages/AttunePage";
 import { MiniWidget } from "./pages/MiniWidget";
 import { OnboardingPage } from "./pages/OnboardingPage";
@@ -25,6 +27,22 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/onboarding" element={<OnboardingGate />} />
+            <Route
+              path="/garden"
+              element={
+                <RequireAuth>
+                  <GardenLanding />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/garden/store"
+              element={
+                <RequireAuth>
+                  <GardenStorePage />
+                </RequireAuth>
+              }
+            />
             <Route path="/mini" element={<MiniWidget />} />
             <Route
               path="/attune"

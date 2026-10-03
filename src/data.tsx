@@ -15,6 +15,7 @@ import { useAuth } from "./auth";
 type LifeData = {
   tasks: Task[];
   events: EventItem[];
+  doneCount: number;
   loading: boolean;
   refreshAll: () => Promise<void>;
   completeTask: (id: string) => Promise<void>;
@@ -39,6 +40,7 @@ export function LifeDataProvider({ children }: { children: ReactNode }) {
   const { user, setOfflineHint } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [doneCount, setDoneCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const timersRef = useRef<Map<string, number>>(new Map());
   const firedRef = useRef<Set<string>>(new Set());
@@ -96,12 +98,14 @@ export function LifeDataProvider({ children }: { children: ReactNode }) {
       const now = new Date();
       const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const to = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59).toISOString();
-      const [openTasks, monthEvents] = await Promise.all([
+      const [openTasks, monthEvents, doneTasks] = await Promise.all([
         api.tasks("open"),
         api.events(from, to),
+        api.tasks("done"),
       ]);
       setTasks(openTasks);
       setEvents(monthEvents);
+      setDoneCount(doneTasks.length);
       scheduleReminders(openTasks, monthEvents);
       setOfflineHint(null);
     } catch {
@@ -115,6 +119,7 @@ export function LifeDataProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setTasks([]);
       setEvents([]);
+      setDoneCount(0);
       clearTimers();
       return;
     }
@@ -165,6 +170,7 @@ export function LifeDataProvider({ children }: { children: ReactNode }) {
     () => ({
       tasks,
       events,
+      doneCount,
       loading,
       refreshAll,
       completeTask,
@@ -172,7 +178,7 @@ export function LifeDataProvider({ children }: { children: ReactNode }) {
       deleteEvent,
       addTask,
     }),
-    [tasks, events, loading, refreshAll, completeTask, deleteTask, deleteEvent, addTask]
+    [tasks, events, doneCount, loading, refreshAll, completeTask, deleteTask, deleteEvent, addTask]
   );
 
   return <LifeDataContext.Provider value={value}>{children}</LifeDataContext.Provider>;
