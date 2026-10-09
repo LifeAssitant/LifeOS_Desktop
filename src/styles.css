@@ -780,6 +780,39 @@ ol.md-list li::before {
   box-shadow: inset 0 1px 3px var(--clay-press-lo);
 }
 
+.chat-intent {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.chat-intent.is-changed {
+  background: color-mix(in srgb, var(--mint) 18%, var(--surface));
+  color: var(--mint);
+}
+
+.chat-intent.is-asking {
+  background: color-mix(in srgb, var(--sky, #6eb6ff) 18%, var(--surface));
+  color: color-mix(in srgb, var(--sky, #3d7ea6) 80%, var(--ink));
+}
+
+.chat-bubble.is-soft-greeting {
+  opacity: 0.96;
+}
+
+.chat-undo.is-note {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.chat-undo:disabled {
+  cursor: default;
+}
+
 .chat-actions {
   display: flex;
   flex-wrap: wrap;

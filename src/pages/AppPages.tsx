@@ -12,6 +12,14 @@ import {
 import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { api, ChatMessage } from "../api";
+
+function replyIntent(message: ChatMessage): "changed" | "asking" | null {
+  if (message.role !== "assistant") return null;
+  const live = (message.actions || []).filter((a) => !a.undone && a.type !== "remember");
+  if (live.some((a) => a.changed_schedule !== false)) return "changed";
+  if (/\?/.test(message.content)) return "asking";
+  return null;
+}
 import { useAuth } from "../auth";
 import { LifeDataProvider, useLifeData } from "../data";
 import { Markdown } from "../markdown";
@@ -256,6 +264,7 @@ export function HomePage() {
   });
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [softGreeting, setSoftGreeting] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -338,6 +347,12 @@ export function HomePage() {
       const history = await api.chatHistory();
       setMessages(history);
       setOfflineHint(null);
+      try {
+        const greeting = await api.chatGreeting();
+        setSoftGreeting(greeting.show && greeting.message ? greeting.message : null);
+      } catch {
+        setSoftGreeting(null);
+      }
     } catch {
       setOfflineHint("We’ll sync when you’re back.");
     }
@@ -351,7 +366,7 @@ export function HomePage() {
     const el = bottomRef.current?.parentElement;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [messages, sending, voice]);
+  }, [messages, sending, voice, softGreeting]);
 
   const sendText = async (raw: string, fromVoice = false) => {
     const text = raw.trim();
@@ -360,6 +375,7 @@ export function HomePage() {
     setSending(true);
     setError("");
     setDraft("");
+    setSoftGreeting(null);
     stopSpeaking();
     setSpeaking(false);
     const optimistic: ChatMessage = {
@@ -545,7 +561,17 @@ export function HomePage() {
             </div>
           ) : null}
 
-          {messages.map((m) => (
+          {softGreeting ? (
+            <div className="chat-bubble is-assistant is-soft-greeting">
+              <span className="chat-intent is-asking">Checking in</span>
+              <Markdown text={softGreeting} />
+            </div>
+          ) : null}
+
+          {messages.map((m) => {
+            const intent = replyIntent(m);
+            const liveActions = (m.actions || []).filter((a) => !a.undone);
+            return (
             <div
               key={m.id}
               className={`chat-bubble ${m.role === "user" ? "is-user" : "is-assistant"}`}
@@ -554,6 +580,11 @@ export function HomePage() {
                 <div className="md-plain">{m.content}</div>
               ) : (
                 <>
+                  {intent === "changed" ? (
+                    <span className="chat-intent is-changed">Updated your plan</span>
+                  ) : intent === "asking" ? (
+                    <span className="chat-intent is-asking">Checking with you</span>
+                  ) : null}
                   <Markdown text={m.content} />
                   <button
                     type="button"
@@ -574,23 +605,29 @@ export function HomePage() {
                   </button>
                 </>
               )}
-              {m.actions?.some((a) => !a.undone) ? (
+              {liveActions.length ? (
                 <div className="chat-actions">
-                  {m.actions.map((a, idx) =>
-                    a.undone ? null : (
+                  {liveActions.map((a) => {
+                    const idx = (m.actions || []).indexOf(a);
+                    const canUndo = a.undoable !== false && a.type !== "remember";
+                    return (
                       <button
                         key={`${m.id}-${idx}`}
-                        className="chat-undo"
-                        onClick={() => void undo(m.id, idx)}
+                        className={`chat-undo${canUndo ? "" : " is-note"}`}
+                        disabled={!canUndo}
+                        onClick={() => {
+                          if (canUndo) void undo(m.id, idx);
+                        }}
                       >
-                        {a.summary} · Undo
+                        {canUndo ? `${a.summary} · Undo` : a.summary}
                       </button>
-                    )
-                  )}
+                    );
+                  })}
                 </div>
               ) : null}
             </div>
-          ))}
+            );
+          })}
 
           {voice === "listening" ? (
             <div className="chat-bubble is-user is-live">

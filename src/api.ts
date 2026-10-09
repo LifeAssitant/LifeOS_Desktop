@@ -168,9 +168,23 @@ export type ChatMessage = {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
-  actions?: Array<{ type: string; summary: string; entity_id?: string; undone?: boolean }> | null;
+  actions?: Array<{
+    type: string;
+    summary: string;
+    entity_id?: string;
+    undone?: boolean;
+    undoable?: boolean;
+    changed_schedule?: boolean;
+  }> | null;
   linked_entity_ids?: string[] | null;
   created_at: string;
+};
+
+export type ChatGreeting = {
+  show: boolean;
+  kind?: string | null;
+  hours_since?: number | null;
+  message?: string | null;
 };
 
 export type GardenStoreItem = {
@@ -242,6 +256,10 @@ export const api = {
     return apiFetch<EventItem[]>(`/events${qs ? `?${qs}` : ""}`);
   },
   chatHistory: () => apiFetch<ChatMessage[]>("/chat/messages"),
+  chatGreeting: () => {
+    const tz = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    return apiFetch<ChatGreeting>(`/chat/greeting?timezone=${tz}`);
+  },
   chatSend: (message: string) =>
     apiFetch<ChatMessage>("/chat/send", {
       method: "POST",
