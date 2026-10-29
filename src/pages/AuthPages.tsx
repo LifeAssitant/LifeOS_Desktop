@@ -121,6 +121,15 @@ export function LoginPage() {
       <AuthDivider />
       <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@company.com" />
       <Field label="Password" value={password} onChange={setPassword} type="password" placeholder="••••••••" />
+      <p className="auth-switch">
+        <a
+          href={`https://brainlesshuman.com/reset-password?email=${encodeURIComponent(email)}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Forgot password?
+        </a>
+      </p>
       <label className="auth-age-consent">
         <input
           type="checkbox"

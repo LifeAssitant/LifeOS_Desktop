@@ -1783,6 +1783,23 @@ ol.md-list li::before {
   font-size: 12.5px;
 }
 
+.billing-action {
+  border: 0;
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  color: var(--on-accent, #fff);
+  background: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.billing-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 920px) {
   .billing-tiers {
     grid-template-columns: 1fr;

@@ -3,8 +3,11 @@
 Electron + React + Vite client with system tray, native notifications, Google sign-in, and Google Calendar sync.
 
 Sign-in requires an 18+ self-declaration; LifeOS does not ask for date of birth.
-Paid credit purchases and subscriptions are disabled at launch. Confirm the age
-policy with qualified counsel before accepting public users.
+Razorpay billing is implemented for web/desktop and remains disabled until the
+backend credentials and matching plan are configured. The proposed India-first
+offer is ₹399/month for 60 AI credits refreshed weekly, plus ₹99 for a one-time
+20-credit top-up. Confirm the age policy and commercial terms with qualified
+counsel/accounting support before public sales.
 
 ## Setup
 
@@ -28,6 +31,9 @@ In Supabase Auth → URL configuration, allow redirect `lifeos://auth/callback`.
 Enable the Google provider with the same OAuth client used by the backend.
 
 The Electron shell registers the `lifeos://` protocol for Google auth and calendar-connect callbacks.
+Forgot-password links open the LifeOS website; SMTP delivery must be configured
+on the backend before account recovery can be used. Reset links expire after
+30 minutes and resetting a password signs out existing sessions.
 
 Keep the backend reminder worker running for server-pushed nudges:
 

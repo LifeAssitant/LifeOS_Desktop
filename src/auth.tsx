@@ -9,7 +9,7 @@ import React, {
 
 import { api, clearTokens, getAccessToken, saveTokens, User } from "./api";
 import { clearGardenEntered } from "./gardenGate";
-import { sessionFromDeepLink, startGoogleOAuth } from "./supabase";
+import { sessionFromDeepLink, signOutSupabase, startGoogleOAuth } from "./supabase";
 
 type AuthState = {
   user: User | null;
@@ -19,6 +19,7 @@ type AuthState = {
   register: (email: string, password: string, name?: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => void;
+  deleteAccount: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setOfflineHint: (v: string | null) => void;
 };
@@ -146,6 +147,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    await api.deleteAccount();
+    clearGardenEntered();
+    clearTokens();
+    setUser(null);
+    await signOutSupabase();
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -155,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       loginWithGoogle,
       logout,
+      deleteAccount,
       refreshUser,
       setOfflineHint,
     }),
@@ -166,6 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       register,
       loginWithGoogle,
       logout,
+      deleteAccount,
       refreshUser,
     ]
   );

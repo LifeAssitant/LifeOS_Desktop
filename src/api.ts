@@ -4,6 +4,22 @@ const ACCESS_KEY = "lifeos_access";
 const REFRESH_KEY = "lifeos_refresh";
 
 export type TokenPair = { access_token: string; refresh_token: string };
+export type BillingOptions = {
+  enabled: boolean;
+  monthly_price_paise: number | null;
+  weekly_credits: number | null;
+  topup_amount_paise: number | null;
+  topup_credits: number | null;
+};
+export type BillingStatus = {
+  credit_balance: number;
+  weekly_subscription_credits: number;
+  subscription_status: string | null;
+  subscription_next_credit_at: string | null;
+  subscription_current_period_end: string | null;
+  subscription_cancel_at_period_end: boolean;
+  billing_enabled: boolean;
+};
 
 export function saveTokens(tokens: TokenPair) {
   localStorage.setItem(ACCESS_KEY, tokens.access_token);
@@ -225,6 +241,7 @@ export const api = {
       false
     ),
   me: () => apiFetch<User>("/me"),
+  deleteAccount: () => apiFetch<void>("/me", { method: "DELETE" }),
   updateMe: (body: Record<string, unknown>) =>
     apiFetch<User>("/me", { method: "PATCH", body: JSON.stringify(body) }),
   saveProfile: (body: ProfileSurvey) =>
@@ -279,8 +296,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ message_id, action_index }),
     }),
-  checkout: () =>
-    apiFetch<{ checkout_url: string }>("/billing/checkout", { method: "POST" }),
+  billingOptions: () => apiFetch<BillingOptions>("/billing/options"),
+  billingStatus: () => apiFetch<BillingStatus>("/billing/status"),
+  subscriptionCheckout: () =>
+    apiFetch<{ checkout_url: string }>("/billing/subscription/checkout", { method: "POST" }),
+  subscriptionCancel: () =>
+    apiFetch<{ status: string }>("/billing/subscription/cancel", { method: "POST" }),
+  topupCheckout: () =>
+    apiFetch<{ checkout_url: string }>("/billing/topup/checkout", { method: "POST" }),
   gardenCatalog: () =>
     apiFetch<{
       credit_balance: number;

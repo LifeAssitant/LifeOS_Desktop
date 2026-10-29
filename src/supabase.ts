@@ -27,6 +27,12 @@ export function isSupabaseConfigured() {
   return Boolean(supabaseUrl && supabaseAnonKey);
 }
 
+export async function signOutSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const { error } = await getSupabase().auth.signOut({ scope: "local" });
+  if (error) throw error;
+}
+
 /** Parse lifeos://auth/... deep links into query + hash params. */
 export function parseAuthDeepLink(url: string): URLSearchParams {
   const normalized = url.replace(/^lifeos:\/\//i, "https://lifeos.local/");

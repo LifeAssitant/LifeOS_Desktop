@@ -971,7 +971,7 @@ function BroomIcon() {
 }
 
 export function SettingsPage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, deleteAccount } = useAuth();
   const { refreshAll } = useLifeData();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"hosted" | "byok">(user?.ai_mode ?? "hosted");
@@ -982,6 +982,7 @@ export function SettingsPage() {
     Boolean(user?.google_calendar_connected)
   );
   const [calendarBusy, setCalendarBusy] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [speakReplies, setSpeakRepliesOn] = useState(() => getSpeakReplies());
 
   useEffect(() => {
@@ -1064,6 +1065,27 @@ export function SettingsPage() {
       setMsg(err instanceof Error ? err.message : "Disconnect failed");
     } finally {
       setCalendarBusy(false);
+    }
+  };
+
+  const removeAccount = async () => {
+    if (
+      !window.confirm(
+        "Permanently delete your LifeOS account, tasks, events, chat history, reminders, and settings? This cannot be undone. Google Calendar access may need to be revoked separately in your Google account."
+      )
+    ) {
+      return;
+    }
+
+    setDeletingAccount(true);
+    setMsg("");
+    try {
+      await deleteAccount();
+      navigate("/login", { replace: true });
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Could not delete account");
+    } finally {
+      setDeletingAccount(false);
     }
   };
 
@@ -1199,6 +1221,19 @@ export function SettingsPage() {
           {msg ? (
             <span style={{ alignSelf: "center", color: colors.muted, fontSize: 13 }}>{msg}</span>
           ) : null}
+        </div>
+        <div className="settings-block">
+          <div className="settings-block-title">Delete account</div>
+          <p className="settings-note">
+            Permanently remove your LifeOS account and data. This cannot be undone.
+          </p>
+          <Button
+            variant="danger"
+            disabled={deletingAccount}
+            onClick={() => void removeAccount()}
+          >
+            {deletingAccount ? "Deleting…" : "Delete my account"}
+          </Button>
         </div>
       </div>
     </div>
