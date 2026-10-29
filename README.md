@@ -2,6 +2,10 @@
 
 Electron + React + Vite client with system tray, native notifications, Google sign-in, and Google Calendar sync.
 
+Sign-in requires an 18+ self-declaration; LifeOS does not ask for date of birth.
+Paid credit purchases and subscriptions are disabled at launch. Confirm the age
+policy with qualified counsel before accepting public users.
+
 ## Setup
 
 ```bash
@@ -35,6 +39,19 @@ python -m app.workers.reminder_worker
 The desktop app also schedules local reminders for due tasks/events while open, and polls pending desktop notifications every few seconds.
 
 Minimize the window to keep LifeOS in the tray.
+
+### Windows release build
+
+Set `VITE_API_URL` in `.env` to the production HTTPS API endpoint before packaging.
+Production builds fail if the URL is missing or does not use HTTPS.
+
+```bash
+npm run package:win
+```
+
+The installer is written to `release/`. This build is unsigned; configure a
+Windows code-signing certificate in the release environment before distributing
+it publicly. Never commit signing credentials.
 
 ### Auth UX
 

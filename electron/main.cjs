@@ -12,6 +12,7 @@ const {
 } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { fileURLToPath } = require("url");
 
 const isDev = !app.isPackaged;
 let mainWindow = null;
@@ -65,6 +66,32 @@ function writeState(patch) {
 function loadRoute(win, hash) {
   if (isDev) win.loadURL(`http://localhost:5173/#/${hash}`);
   else win.loadFile(path.join(__dirname, "../dist/index.html"), { hash });
+}
+
+function isAppUrl(rawUrl) {
+  try {
+    const url = new URL(rawUrl);
+    if (isDev) return url.origin === "http://localhost:5173";
+    return (
+      url.protocol === "file:" &&
+      path.resolve(fileURLToPath(url)) ===
+        path.resolve(path.join(__dirname, "../dist/index.html"))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function guardWindow(win) {
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+    return { action: "deny" };
+  });
+  win.webContents.on("will-navigate", (event, url) => {
+    if (isAppUrl(url)) return;
+    event.preventDefault();
+    if (/^https?:\/\//i.test(url)) void shell.openExternal(url);
+  });
 }
 
 /** Nearest corner of the work area the widget currently sits closest to. */
@@ -126,6 +153,7 @@ function createMiniWindow() {
       nodeIntegration: false,
     },
   });
+  guardWindow(miniWindow);
 
   miniWindow.setAlwaysOnTop(true, "floating");
   miniWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
@@ -227,6 +255,7 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
+  guardWindow(mainWindow);
 
   mainWindow.setMenu(null);
   mainWindow.setMenuBarVisibility(false);
@@ -337,15 +366,46 @@ ipcMain.handle("get-auth-url", () => {
 });
 
 app.whenReady().then(() => {
-  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(
-      permission === "media" ||
-        permission === "audioCapture" ||
-        permission === "microphone" ||
-        permission === "notifications" ||
-        permission === "clipboard-sanitized-write"
-    );
-  });
+  session.defaultSession.setPermissionRequestHandler(
+    (webContents, permission, callback, details) => {
+      if (!isAppUrl(details.requestingUrl) || !isAppUrl(webContents.getURL())) {
+        callback(false);
+        return;
+      }
+
+      const audioOnly =
+        (permission === "media" ||
+          permission === "audioCapture" ||
+          permission === "microphone") &&
+        details.mediaTypes?.includes("audio") &&
+        !details.mediaTypes?.includes("video");
+      callback(
+        Boolean(
+          audioOnly ||
+            permission === "notifications" ||
+            permission === "clipboard-sanitized-write"
+        )
+      );
+    }
+  );
+  session.defaultSession.setPermissionCheckHandler(
+    (webContents, permission, requestingOrigin, details) => {
+      if (!webContents || !isAppUrl(webContents.getURL())) return false;
+      const trustedOrigin = isDev
+        ? requestingOrigin === "http://localhost:5173"
+        : requestingOrigin === "file://" || requestingOrigin === "null";
+      if (!trustedOrigin) return false;
+      if (permission === "notifications" || permission === "clipboard-sanitized-write") {
+        return true;
+      }
+      return (
+        (permission === "media" ||
+          permission === "audioCapture" ||
+          permission === "microphone") &&
+        details?.mediaType === "audio"
+      );
+    }
+  );
 
   Menu.setApplicationMenu(null);
   createWindow();

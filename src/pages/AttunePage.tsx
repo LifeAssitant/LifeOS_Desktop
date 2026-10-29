@@ -36,7 +36,7 @@ export const USE_CASES = [
   "Appointments",
 ];
 
-const STAGES = 4;
+const STAGES = 3;
 
 function splitExtra(value: string) {
   return value
@@ -51,7 +51,6 @@ export function AttunePage() {
   const [stage, setStage] = useState(0);
   const [roles, setRoles] = useState<string[]>([]);
   const [roleOther, setRoleOther] = useState("");
-  const [age, setAge] = useState("");
   const [busy, setBusy] = useState(0);
   const [uses, setUses] = useState<string[]>([]);
   const [useOther, setUseOther] = useState("");
@@ -70,7 +69,6 @@ export function AttunePage() {
     try {
       await api.saveProfile({
         professions: chosenRoles.length ? chosenRoles : undefined,
-        age: Number(age) || undefined,
         busy_level: busy || undefined,
         use_cases: chosenUses.length ? chosenUses : undefined,
       });
@@ -87,10 +85,8 @@ export function AttunePage() {
     stage === 0
       ? chosenRoles.length > 0
       : stage === 1
-        ? Boolean(Number(age))
-        : stage === 2
-          ? busy > 0
-          : true;
+        ? busy > 0
+        : true;
 
   return (
     <Shell>
@@ -101,7 +97,7 @@ export function AttunePage() {
             <div>
               <h1 className="attune-title">Attune</h1>
               <p className="attune-sub">
-                Four quick things so LifeOS starts out shaped like your life.
+                Three quick things so LifeOS starts out shaped like your life.
               </p>
             </div>
             <div className="attune-count">
@@ -139,26 +135,6 @@ export function AttunePage() {
           ) : null}
 
           {stage === 1 ? (
-            <section className="attune-stage attune-stage-center fade-in">
-              <h2 className="attune-q">How old are you?</h2>
-              <p className="attune-hint">It helps us read the rest of your answers.</p>
-              <div className="age-well">
-                <input
-                  className="age-input"
-                  type="number"
-                  min={5}
-                  max={120}
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  placeholder="24"
-                  autoFocus
-                />
-                <span>years</span>
-              </div>
-            </section>
-          ) : null}
-
-          {stage === 2 ? (
             <section className="attune-stage fade-in">
               <h2 className="attune-q">How packed is a normal week?</h2>
               <p className="attune-hint">
@@ -169,7 +145,7 @@ export function AttunePage() {
             </section>
           ) : null}
 
-          {stage === 3 ? (
+          {stage === 2 ? (
             <section className="attune-stage fade-in">
               <h2 className="attune-q">What will you lean on LifeOS for?</h2>
               <p className="attune-hint">Pick as many as fit.</p>

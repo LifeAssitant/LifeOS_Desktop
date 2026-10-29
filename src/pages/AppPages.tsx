@@ -1023,15 +1023,6 @@ export function SettingsPage() {
     }
   };
 
-  const buy = async () => {
-    try {
-      const { checkout_url } = await api.checkout();
-      window.open(checkout_url, "_blank");
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Stripe not configured");
-    }
-  };
-
   const connectCalendar = async () => {
     setCalendarBusy(true);
     setMsg("");
@@ -1149,6 +1140,7 @@ export function SettingsPage() {
           <div className="settings-block-title">AI</div>
           <p className="settings-note">
             Use LifeOS credits, or bring your own Gemini key and skip them entirely.
+            Paid credit packs are not available yet.
           </p>
           <div className="segmented">
             <button
@@ -1204,9 +1196,6 @@ export function SettingsPage() {
 
         <div className="settings-row" style={{ paddingBottom: 4 }}>
           <Button onClick={save}>Save changes</Button>
-          <Button variant="ghost" onClick={() => void buy()}>
-            Buy credits
-          </Button>
           {msg ? (
             <span style={{ alignSelf: "center", color: colors.muted, fontSize: 13 }}>{msg}</span>
           ) : null}

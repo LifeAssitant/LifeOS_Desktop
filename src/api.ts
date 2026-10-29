@@ -129,7 +129,6 @@ export type User = {
   google_calendar_connected?: boolean;
   profession?: string | null;
   professions?: string[] | null;
-  age?: number | null;
   busy_level?: number | null;
   use_cases?: string[] | null;
   profile_completed?: boolean;
@@ -137,7 +136,6 @@ export type User = {
 
 export type ProfileSurvey = {
   professions?: string[];
-  age?: number;
   busy_level?: number;
   use_cases?: string[];
 };
@@ -208,19 +206,22 @@ export const api = {
   register: (email: string, password: string, display_name?: string) =>
     apiFetch<TokenPair>(
       "/auth/register",
-      { method: "POST", body: JSON.stringify({ email, password, display_name }) },
+      {
+        method: "POST",
+        body: JSON.stringify({ email, password, display_name, confirm_adult: true }),
+      },
       false
     ),
   login: (email: string, password: string) =>
     apiFetch<TokenPair>(
       "/auth/login",
-      { method: "POST", body: JSON.stringify({ email, password }) },
+      { method: "POST", body: JSON.stringify({ email, password, confirm_adult: true }) },
       false
     ),
   loginWithGoogle: (access_token: string) =>
     apiFetch<TokenPair>(
       "/auth/google",
-      { method: "POST", body: JSON.stringify({ access_token }) },
+      { method: "POST", body: JSON.stringify({ access_token, confirm_adult: true }) },
       false
     ),
   me: () => apiFetch<User>("/me"),

@@ -59,6 +59,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -70,8 +71,12 @@ export function LoginPage() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    if (!adultConfirmed) {
+      setError("Confirm that you are 18 or older to continue.");
+      return;
+    }
+    setLoading(true);
     try {
       await login(email, password);
       navigate("/");
@@ -83,6 +88,10 @@ export function LoginPage() {
   };
 
   const onGoogle = async () => {
+    if (!adultConfirmed) {
+      setError("Confirm that you are 18 or older to continue.");
+      return;
+    }
     setGoogleLoading(true);
     setError("");
     try {
@@ -112,6 +121,18 @@ export function LoginPage() {
       <AuthDivider />
       <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="you@company.com" />
       <Field label="Password" value={password} onChange={setPassword} type="password" placeholder="••••••••" />
+      <label className="auth-age-consent">
+        <input
+          type="checkbox"
+          checked={adultConfirmed}
+          onChange={(event) => setAdultConfirmed(event.target.checked)}
+        />
+        <span>
+          I confirm I am 18 or older and agree to the{" "}
+          <a href="https://brainlesshuman.com/terms" target="_blank" rel="noreferrer">Terms</a> and{" "}
+          <a href="https://brainlesshuman.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+        </span>
+      </label>
       {error || offlineHint ? <p className="auth-error">{error || offlineHint}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? "Signing in…" : "Sign in"}
@@ -126,6 +147,7 @@ export function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -137,8 +159,12 @@ export function RegisterPage() {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    if (!adultConfirmed) {
+      setError("Confirm that you are 18 or older to create an account.");
+      return;
+    }
+    setLoading(true);
     if (!email.trim() || !email.includes("@")) {
       setError("Enter a valid email address.");
       setLoading(false);
@@ -160,6 +186,10 @@ export function RegisterPage() {
   };
 
   const onGoogle = async () => {
+    if (!adultConfirmed) {
+      setError("Confirm that you are 18 or older to create an account.");
+      return;
+    }
     setGoogleLoading(true);
     setError("");
     try {
@@ -196,6 +226,18 @@ export function RegisterPage() {
         type="password"
         placeholder="At least 8 characters"
       />
+      <label className="auth-age-consent">
+        <input
+          type="checkbox"
+          checked={adultConfirmed}
+          onChange={(event) => setAdultConfirmed(event.target.checked)}
+        />
+        <span>
+          I confirm I am 18 or older and agree to the{" "}
+          <a href="https://brainlesshuman.com/terms" target="_blank" rel="noreferrer">Terms</a> and{" "}
+          <a href="https://brainlesshuman.com/privacy" target="_blank" rel="noreferrer">Privacy Policy</a>.
+        </span>
+      </label>
       {error || offlineHint ? <p className="auth-error">{error || offlineHint}</p> : null}
       <Button type="submit" disabled={loading}>
         {loading ? "Creating…" : "Create account"}
